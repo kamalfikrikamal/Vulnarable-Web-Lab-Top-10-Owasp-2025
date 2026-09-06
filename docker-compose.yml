@@ -1,0 +1,49 @@
+services:
+  gateway:
+    build: ./gateway
+    ports:
+      - "8079:8079"
+    depends_on:
+      - portal
+      - sqli-web
+      - xss-web
+      - cmdi-web
+    restart: unless-stopped
+
+  portal:
+    build: ./portal
+    restart: unless-stopped
+
+  sqli-web:
+    build: ./sql-injection/app
+    depends_on:
+      sqli-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  sqli-db:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root_pass_change_me
+      MYSQL_DATABASE: vulnshop
+    volumes:
+      - ./sql-injection/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot_pass_change_me"]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+    restart: unless-stopped
+
+  xss-web:
+    build: ./xss/app
+    volumes:
+      - xss_data:/var/www/html/data
+    restart: unless-stopped
+
+  cmdi-web:
+    build: ./command-injection/app
+    restart: unless-stopped
+
+volumes:
+  xss_data:

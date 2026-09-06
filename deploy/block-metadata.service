@@ -1,0 +1,12 @@
+[Unit]
+Description=Block container access to cloud metadata endpoint (169.254.169.254)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/vuln-web-lab/deploy/block-metadata.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

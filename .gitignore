@@ -1,0 +1,2 @@
+# Kredensial login gateway - JANGAN commit password asli yang dipakai di deployment nyata.
+gateway/.htpasswd
