@@ -106,7 +106,8 @@ docker compose ps    # pastikan semua service "running"/"healthy"
 - URL portal: `http://203.0.113.10:8079`
 - Username & password: sesuai yang dibuat di langkah 5 (sama untuk semua peserta).
 
-Semua lab ada di **satu port** (8079), dibedakan lewat path (`/sqli/`, `/xss/`, `/cmdi/`).
+Semua lab ada di **satu port** (8079), dibedakan lewat path (`/sqli/`, `/xss/`, `/cmdi/`,
+`/lfi/`, `/upload/`).
 Karena itu peserta cukup **login sekali** di prompt Basic Auth pertama — browser otomatis
 memakai kredensial yang sama saat berpindah ke lab mana pun tanpa diminta login ulang.
 

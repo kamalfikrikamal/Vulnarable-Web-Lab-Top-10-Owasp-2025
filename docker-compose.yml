@@ -8,6 +8,8 @@ services:
       - sqli-web
       - xss-web
       - cmdi-web
+      - lfi-web
+      - upload-web
     restart: unless-stopped
 
   portal:
@@ -45,5 +47,18 @@ services:
     build: ./command-injection/app
     restart: unless-stopped
 
+  lfi-web:
+    build: ./lfi/app
+    restart: unless-stopped
+
+  upload-web:
+    build: ./file-upload/app
+    volumes:
+      - upload_uploads:/var/www/html/uploads
+      - upload_safe:/var/www/html/uploads_safe
+    restart: unless-stopped
+
 volumes:
   xss_data:
+  upload_uploads:
+  upload_safe:

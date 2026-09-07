@@ -3,15 +3,16 @@
 Portal navigasi + kumpulan aplikasi web yang sengaja dibuat rentan (PHP + Docker), disusun
 untuk materi pelatihan pentest web. Struktur mengikuti **OWASP Top 10:2025 (Release
 Candidate)** sebagai peta kategori, dengan kerentanan Injection (SQL Injection, XSS, OS
-Command Injection) sebagai konten yang sudah lengkap saat ini di kategori **A05:2025 —
-Injection**. Kategori lain sudah disiapkan slot-nya di portal dan tinggal diisi labnya
-belakangan tanpa perlu merombak struktur.
+Command Injection, Local File Inclusion, File Upload Vulnerabilities) sebagai konten yang
+sudah lengkap saat ini di kategori **A05:2025 — Injection**. Kategori lain sudah disiapkan
+slot-nya di portal dan tinggal diisi labnya belakangan tanpa perlu merombak struktur.
 
 > ⚠️ **PERINGATAN KEAMANAN** — Semua aplikasi di repo ini SENGAJA dibuat rentan untuk tujuan
-> edukasi, termasuk `command-injection/` yang benar-benar mengeksekusi perintah shell (RCE
-> sungguhan). Seluruh lab dilindungi **login gate (HTTP Basic Auth)** lewat service `gateway`
-> — **wajib ganti kredensial default sebelum di-deploy ke server mana pun**, lihat
-> [DEPLOY.md](DEPLOY.md) untuk panduan deploy yang aman ke DigitalOcean.
+> edukasi, termasuk `command-injection/`, `lfi/`, dan `file-upload/` yang benar-benar bisa
+> mencapai eksekusi perintah shell (RCE sungguhan). Seluruh lab dilindungi **login gate (HTTP
+> Basic Auth)** lewat service `gateway` — **wajib ganti kredensial default sebelum di-deploy
+> ke server mana pun**, lihat [DEPLOY.md](DEPLOY.md) untuk panduan deploy yang aman ke
+> DigitalOcean.
 
 ## Struktur
 
@@ -25,7 +26,9 @@ belakangan tanpa perlu merombak struktur.
 │   └── src/data.php       # Konfigurasi seluruh konten portal (edit di sini untuk menambah lab baru)
 ├── sql-injection/         # PHP + MySQL - 7 lab SQL Injection
 ├── xss/                   # PHP - 7 lab XSS
-└── command-injection/     # PHP - 4 lab OS Command Injection
+├── command-injection/     # PHP - 4 lab OS Command Injection
+├── lfi/                   # PHP - 7 lab Local File Inclusion (LFI) / Path Traversal
+└── file-upload/           # PHP - 7 lab File Upload Vulnerabilities
 ```
 
 Kode tiap kerentanan tetap terpisah per folder (sesuai kategorinya), tapi **hanya ada satu
@@ -50,6 +53,8 @@ yang baru saja dibuat).
 | SQL Injection | http://localhost:8079/sqli/ | Bisa juga diakses langsung tanpa lewat portal |
 | XSS | http://localhost:8079/xss/ | idem |
 | Command Injection | http://localhost:8079/cmdi/ | idem |
+| Local File Inclusion (LFI) | http://localhost:8079/lfi/ | idem |
+| File Upload Vulnerabilities | http://localhost:8079/upload/ | idem |
 
 Semua di atas ada di **satu port** (8079) dan dibedakan lewat path, dijaga oleh `gateway`
 (Basic Auth) di level port tersebut — jadi cukup **login sekali**, browser otomatis
@@ -109,6 +114,8 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [sql-injection/README.md](sql-injection/README.md) — 7 lab SQL Injection
 - [xss/README.md](xss/README.md) — 7 lab XSS
 - [command-injection/README.md](command-injection/README.md) — 4 lab Command Injection
+- [lfi/README.md](lfi/README.md) — 7 lab Local File Inclusion (LFI) / Path Traversal
+- [file-upload/README.md](file-upload/README.md) — 7 lab File Upload Vulnerabilities
 
 Kunci jawaban lengkap tiap lab (khusus trainer/pendamping — jangan dibagikan ke peserta
 sebelum sesi selesai):
@@ -116,9 +123,12 @@ sebelum sesi selesai):
 - [sql-injection/JAWABAN.md](sql-injection/JAWABAN.md)
 - [xss/JAWABAN.md](xss/JAWABAN.md)
 - [command-injection/JAWABAN.md](command-injection/JAWABAN.md)
+- [lfi/JAWABAN.md](lfi/JAWABAN.md)
+- [file-upload/JAWABAN.md](file-upload/JAWABAN.md)
 
-## Saran alur pelatihan (1 hari, fokus Injection)
+## Saran alur pelatihan (2 hari, fokus Injection)
 
+**Hari 1**
 1. **Konsep dasar** (15 menit): buka Portal → klik kategori **A05: Injection**, bahas
    penjelasan & contoh di halaman tersebut bersama-sama.
 2. **SQL Injection** (~2 jam): dari halaman kategori, klik **SQL Injection**, lalu kerjakan
@@ -127,8 +137,15 @@ sebelum sesi selesai):
    Lab 1 → 7.
 4. **Command Injection** (~1 jam): klik **OS Command Injection**, kerjakan Lab 1 → 4, tutup
    dengan diskusi risiko memanggil shell dari aplikasi web.
-5. **Diskusi mitigasi** (30 menit): bandingkan kode vulnerable vs perbaikannya — lihat bagian
-   "Mitigasi" di tiap README folder.
+
+**Hari 2**
+5. **Local File Inclusion (LFI)** (~1.5 jam): klik **Local File Inclusion (LFI)**, kerjakan
+   Lab 1 → 7 (5 variasi filter bypass ala PortSwigger, lalu LFI-to-RCE lewat PHP wrapper &
+   log poisoning).
+6. **File Upload Vulnerabilities** (~1.5 jam): klik **File Upload Vulnerabilities**, kerjakan
+   Lab 1 → 7 (dari upload tanpa validasi sampai race condition).
+7. **Diskusi mitigasi** (30 menit): bandingkan kode vulnerable vs perbaikannya untuk seluruh 5
+   jenis kerentanan — lihat bagian "Mitigasi" di tiap README folder.
 
 ## Tooling yang disarankan untuk peserta
 - Browser + DevTools
@@ -141,21 +158,22 @@ sebelum sesi selesai):
 - Semua image dibangun dari `php:8.2-apache` resmi, kecuali `gateway` yang memakai
   `nginx:1.27-alpine`.
 - `sql-injection/` memakai MySQL 8 sebagai container database terpisah (service `sqli-db`
-  di `docker-compose.yml`); dua lab lainnya tidak butuh database eksternal.
+  di `docker-compose.yml`); lab lainnya tidak butuh database eksternal.
 - Setiap halaman lab punya link "← Portal" untuk kembali ke hub navigasi.
 - Kategori OWASP Top 10:2025 yang dipakai portal mengacu pada Release Candidate yang beredar
   saat dokumen ini ditulis; sesuaikan urutan/penamaan di `portal/src/data.php` bila versi
   final berbeda.
-- `portal`, `sqli-web`, `xss-web`, dan `cmdi-web` **tidak** publish port ke host sama sekali —
-  semua akses publik lewat satu port `gateway` (8079, nginx + Basic Auth) yang meneruskan
-  request ke masing-masing service lewat jaringan Docker internal berdasarkan path
-  (`/sqli/`, `/xss/`, `/cmdi/`). Karena hanya ada satu origin (satu port), login Basic Auth
-  cukup sekali dan otomatis berlaku untuk semua path/lab.
+- `portal`, `sqli-web`, `xss-web`, `cmdi-web`, `lfi-web`, dan `upload-web` **tidak** publish
+  port ke host sama sekali — semua akses publik lewat satu port `gateway` (8079, nginx +
+  Basic Auth) yang meneruskan request ke masing-masing service lewat jaringan Docker internal
+  berdasarkan path (`/sqli/`, `/xss/`, `/cmdi/`, `/lfi/`, `/upload/`). Karena hanya ada satu
+  origin (satu port), login Basic Auth cukup sekali dan otomatis berlaku untuk semua path/lab.
 - `gateway/.htpasswd` **tidak boleh** memakai kredensial default/contoh saat online di server
   publik — lihat [DEPLOY.md](DEPLOY.md) langkah generate kredensial. File ini masuk
   `.gitignore` supaya tidak ikut ter-commit kalau repo di-push ke Git.
 - Resource limit (CPU/memory/`pids_limit`) sengaja **tidak** diaktifkan di `docker-compose.yml`
-  agar setup tetap sederhana; mitigasi risiko dari command-injection RCE mengandalkan login
-  gate + block metadata endpoint di atas, bukan resource containment. Kalau butuh lapisan
+  agar setup tetap sederhana; mitigasi risiko dari RCE (command-injection, LFI-to-RCE, webshell
+  upload) mengandalkan login gate + block metadata endpoint di atas, bukan resource
+  containment. Kalau butuh lapisan
   proteksi tambahan (mis. fork-bomb protection), tambahkan `pids_limit` per service secara
   manual.

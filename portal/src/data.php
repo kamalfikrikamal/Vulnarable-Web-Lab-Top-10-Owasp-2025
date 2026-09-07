@@ -37,7 +37,7 @@ function owasp_categories() {
         'a05-injection' => [
             'code' => 'A05:2025', 'title' => 'Injection', 'status' => 'active',
             'summary' => 'Input pengguna tercampur dengan kode/perintah yang dijalankan sistem.',
-            'description' => '<p>Injection terjadi ketika aplikasi mengirim data yang tidak tepercaya (input dari pengguna) ke sebuah <em>interpreter</em> - misalnya database (SQL), browser (HTML/JavaScript), atau shell sistem operasi - dan data tersebut ikut ditafsirkan sebagai bagian dari perintah/kode, bukan sekadar data biasa.</p><p><strong>Contoh sederhana:</strong> Sebuah form login membangun query seperti ini secara langsung dari input pengguna:</p><div class="example">SELECT * FROM users WHERE username = \'$username\' AND password = \'$password\'</div><p>Jika pengguna mengisi username dengan <code>admin\' -- -</code>, maka tanda kutip yang seharusnya jadi "data" malah menutup string SQL lebih awal, dan <code>-- </code> mengubah sisa query jadi komentar sehingga pengecekan password terlewati begitu saja. Prinsip yang sama berlaku pada XSS (data tercampur ke dalam HTML/JavaScript yang dieksekusi browser) dan Command Injection (data tercampur ke dalam perintah shell sistem operasi).</p><p>Lab yang kita pelajari hari ini - <strong>SQL Injection</strong>, <strong>Cross-Site Scripting (XSS)</strong>, dan <strong>OS Command Injection</strong> - semuanya adalah variasi dari masalah dasar yang sama ini.</p>',
+            'description' => '<p>Injection terjadi ketika aplikasi mengirim data yang tidak tepercaya (input dari pengguna) ke sebuah <em>interpreter</em> - misalnya database (SQL), browser (HTML/JavaScript), atau shell sistem operasi - dan data tersebut ikut ditafsirkan sebagai bagian dari perintah/kode, bukan sekadar data biasa.</p><p><strong>Contoh sederhana:</strong> Sebuah form login membangun query seperti ini secara langsung dari input pengguna:</p><div class="example">SELECT * FROM users WHERE username = \'$username\' AND password = \'$password\'</div><p>Jika pengguna mengisi username dengan <code>admin\' -- -</code>, maka tanda kutip yang seharusnya jadi "data" malah menutup string SQL lebih awal, dan <code>-- </code> mengubah sisa query jadi komentar sehingga pengecekan password terlewati begitu saja. Prinsip yang sama berlaku pada XSS (data tercampur ke dalam HTML/JavaScript yang dieksekusi browser), Command Injection (data tercampur ke dalam perintah shell sistem operasi), LFI (nama file dari input tercampur ke dalam path yang dimasukkan <code>include()</code>), dan File Upload (isi/nama file dari pengguna dipercaya begitu saja sebagai data yang aman untuk disimpan dan diakses kembali).</p><p>Lab yang kita pelajari hari ini - <strong>SQL Injection</strong>, <strong>Cross-Site Scripting (XSS)</strong>, <strong>OS Command Injection</strong>, <strong>Local File Inclusion (LFI)</strong>, dan <strong>File Upload Vulnerabilities</strong> - semuanya adalah variasi dari masalah dasar yang sama ini.</p>',
             'vulns' => [
                 'sqli' => [
                     'title' => 'SQL Injection',
@@ -165,6 +165,104 @@ function owasp_categories() {
                             'summary' => 'Bukan lewat metakarakter shell, tapi lewat flag command-line.',
                             'description' => '<p>Input sudah dibungkus aman secara shell (mis. <code>escapeshellarg()</code>), sehingga metakarakter seperti <code>; | &amp;</code> tidak berguna. Tapi jika input diteruskan sebagai argumen program tanpa penanda akhir opsi (<code>--</code>), nilai yang diawali tanda minus (<code>-</code>) akan ditafsirkan program sebagai <em>flag</em>, bukan data.</p><p><strong>Contoh payload:</strong> <code>url=-V</code> (curl menampilkan info versi, bukan mengambil URL apa pun)</p>',
                             'app' => 'cmdi', 'path' => 'lab4_argument_injection.php',
+                        ],
+                    ],
+                ],
+                'lfi' => [
+                    'title' => 'Local File Inclusion (LFI)',
+                    'summary' => 'Menyisipkan path file lain lewat parameter yang dipakai include()/require().',
+                    'description' => '<p>LFI (Local File Inclusion) terjadi ketika aplikasi memasukkan nama/path file dari input pengguna langsung ke fungsi seperti <code>include()</code> atau <code>require()</code> tanpa validasi memadai. Penyerang bisa memanfaatkannya untuk membaca file sensitif di server (path traversal), dan pada kasus yang lebih parah, menaikkannya jadi eksekusi kode (RCE) lewat PHP stream wrapper atau log poisoning.</p><p><strong>Contoh sederhana:</strong> Halaman menampilkan konten lewat <code>include($_GET[\'page\'] . \'.php\')</code>. Jika parameter <code>page</code> diisi <code>../../../../etc/passwd%00</code> (pada sistem lama) atau cukup <code>../../../../etc/passwd</code> (tanpa ekstensi dipaksakan), isi file sistem bisa ikut ditampilkan.</p>',
+                    'labs' => [
+                        'basic' => [
+                            'title' => 'Basic LFI (simple case)',
+                            'summary' => 'Parameter page langsung masuk ke include() tanpa validasi.',
+                            'description' => '<p>Tidak ada filter maupun whitelist sama sekali - path apa pun yang bisa di-resolve filesystem akan langsung dimasukkan ke <code>include()</code>.</p><p><strong>Contoh payload:</strong> <code>?page=../../../../etc/passwd</code></p>',
+                            'app' => 'lfi', 'path' => 'lab1_basic.php',
+                        ],
+                        'absolute-bypass' => [
+                            'title' => 'Traversal diblokir, absolute path lolos',
+                            'summary' => 'Filter hanya mencari substring "../", path absolut tidak butuh itu sama sekali.',
+                            'description' => '<p>Filter menolak input yang mengandung <code>../</code>, tapi lupa bahwa path absolut (mis. <code>/etc/passwd</code>) tidak memerlukan notasi traversal sama sekali untuk menunjuk file di luar direktori aplikasi.</p><p><strong>Contoh payload:</strong> <code>?page=/etc/passwd</code></p>',
+                            'app' => 'lfi', 'path' => 'lab2_absolute_bypass.php',
+                        ],
+                        'nonrecursive-strip' => [
+                            'title' => 'Traversal sequence dihapus non-recursive',
+                            'summary' => '"../" dihapus cuma satu kali, bukan berulang.',
+                            'description' => '<p><code>str_replace(\'../\', \'\', $input)</code> hanya menghapus satu lapis kemunculan. Input seperti <code>....//</code> akan tersisa <code>../</code> setelah satu kali penghapusan.</p><p><strong>Contoh payload:</strong> <code>?page=....//....//....//etc/passwd</code></p>',
+                            'app' => 'lfi', 'path' => 'lab3_nonrecursive_strip.php',
+                        ],
+                        'double-decode' => [
+                            'title' => 'Filter lalu URL-decode berlebih',
+                            'summary' => 'Aplikasi men-decode input sekali lagi setelah filter traversal dijalankan.',
+                            'description' => '<p>Filter <code>../</code> dijalankan duluan, baru input di-<code>urldecode()</code> manual sekali lagi setelahnya. Payload yang di-double URL-encode lolos filter (masih terenkode saat difilter), lalu "muncul" jadi traversal asli setelah decode kedua.</p><p><strong>Contoh payload:</strong> <code>?page=%252e%252e%252fetc%252fpasswd</code></p>',
+                            'app' => 'lfi', 'path' => 'lab4_double_decode.php',
+                        ],
+                        'start-validation' => [
+                            'title' => 'Validasi hanya di awal path',
+                            'summary' => 'Aplikasi cuma memastikan input dimulai dengan folder yang diizinkan.',
+                            'description' => '<p>Validasi hanya mengecek bahwa string input <em>dimulai</em> dengan <code>pages/</code>, tanpa menormalisasi hasil akhirnya lewat <code>realpath()</code>.</p><p><strong>Contoh payload:</strong> <code>?page=pages/../../../../etc/passwd</code></p>',
+                            'app' => 'lfi', 'path' => 'lab5_start_validation.php',
+                        ],
+                        'extension-nullbyte' => [
+                            'title' => 'Validasi ekstensi dengan null byte bypass',
+                            'summary' => 'Validasi hanya cek akhiran ".png", null byte memotong path sebelum dieksekusi.',
+                            'description' => '<p>Validasi memeriksa bahwa input berakhiran <code>.png</code>. Null byte (<code>%00</code>) disisipkan di antara path target dan ekstensi palsu - teknik historis dari PHP &lt; 5.3.4, disimulasikan di lab ini supaya tetap bisa dipraktikkan.</p><p><strong>Contoh payload:</strong> <code>?page=../../../../etc/passwd%00.png</code></p>',
+                            'app' => 'lfi', 'path' => 'lab6_extension_nullbyte.php',
+                        ],
+                        'wrappers-rce' => [
+                            'title' => 'LFI to RCE (PHP wrappers & log poisoning)',
+                            'summary' => 'Naikkan level dari baca file jadi eksekusi kode lewat php://filter, php://input, dan log poisoning.',
+                            'description' => '<p>Tidak ada validasi sama sekali. Gunakan <code>php://filter</code> untuk membaca source code tanpa mengeksekusinya, <code>php://input</code> untuk mengeksekusi body request sebagai PHP, atau racuni log request (header User-Agent) lalu include file log tersebut untuk mencapai RCE penuh.</p><p><strong>Contoh payload:</strong> <code>?page=php://filter/convert.base64-encode/resource=pages/secret_notes.php</code></p>',
+                            'app' => 'lfi', 'path' => 'lab7_wrappers_rce.php',
+                        ],
+                    ],
+                ],
+                'file-upload' => [
+                    'title' => 'File Upload Vulnerabilities',
+                    'summary' => 'Validasi upload file yang lemah memungkinkan webshell tersimpan & tereksekusi di server.',
+                    'description' => '<p>Kerentanan File Upload terjadi ketika aplikasi mengizinkan pengguna meng-upload file tanpa memvalidasi jenis, isi, atau lokasi penyimpanannya dengan benar. Jika penyerang berhasil menaruh file berisi kode (mis. skrip PHP) ke direktori yang bisa dieksekusi web server, hasilnya adalah Remote Code Execution (RCE) penuh lewat "web shell".</p><p><strong>Contoh sederhana:</strong> Fitur upload avatar hanya mengecek ekstensi file dari nama yang dikirim, tanpa memeriksa isi sebenarnya. Jika penyerang meng-upload <code>shell.php</code> berisi <code>&lt;?php system($_GET[\'cmd\']); ?&gt;</code> dan file tersebut tersimpan di folder yang bisa diakses langsung, mengunjungi <code>shell.php?cmd=id</code> akan menjalankan perintah sistem operasi.</p>',
+                    'labs' => [
+                        'unrestricted' => [
+                            'title' => 'Remote code execution via unrestricted upload',
+                            'summary' => 'Tidak ada validasi ekstensi maupun konten sama sekali.',
+                            'description' => '<p>Bentuk paling dasar: file apa pun diterima dan disimpan langsung ke direktori yang bisa mengeksekusi PHP.</p><p><strong>Contoh:</strong> upload <code>shell.php</code>, akses <code>uploads/shell.php?cmd=id</code>.</p>',
+                            'app' => 'upload', 'path' => 'lab1_unrestricted.php',
+                        ],
+                        'content-type-bypass' => [
+                            'title' => 'Web shell upload via Content-Type restriction bypass',
+                            'summary' => 'Validasi cuma mengandalkan header Content-Type yang dikirim client.',
+                            'description' => '<p>Aplikasi memeriksa <code>$_FILES[\'file\'][\'type\']</code>, nilai yang sepenuhnya dikendalikan oleh client lewat header multipart - sama sekali tidak dicocokkan dengan isi file sesungguhnya.</p><p><strong>Contoh:</strong> <code>curl -F "file=@shell.php;type=image/png" ...</code></p>',
+                            'app' => 'upload', 'path' => 'lab2_content_type.php',
+                        ],
+                        'path-traversal' => [
+                            'title' => 'Web shell upload via path traversal',
+                            'summary' => 'Upload dibatasi ke folder aman, tapi nama file tidak disanitasi dari traversal.',
+                            'description' => '<p>Direktori upload "aman" mematikan eksekusi PHP, tapi nama file dari field multipart dipakai mentah untuk membangun path tujuan sehingga <code>../</code> bisa membawa file keluar ke direktori lain yang PHP-nya aktif.</p><p><strong>Contoh:</strong> <code>filename="../uploads/shell.php"</code></p>',
+                            'app' => 'upload', 'path' => 'lab3_path_traversal.php',
+                        ],
+                        'blacklist-bypass' => [
+                            'title' => 'Web shell upload via extension blacklist bypass',
+                            'summary' => 'Blacklist ekstensi PHP tidak lengkap.',
+                            'description' => '<p>Blacklist memblokir <code>.php/.php3/.php4/.php5/.php7</code> tapi lupa varian lain (<code>.phtml</code>, <code>.pht</code>) yang tetap dieksekusi PHP oleh konfigurasi Apache bawaan.</p><p><strong>Contoh:</strong> upload <code>shell.phtml</code>.</p>',
+                            'app' => 'upload', 'path' => 'lab4_blacklist_bypass.php',
+                        ],
+                        'obfuscated-extension' => [
+                            'title' => 'Web shell upload via extension handling override (.htaccess)',
+                            'summary' => 'Blacklist ekstensi lengkap, tapi tidak menyangka nama filenya bisa jadi file konfigurasi Apache.',
+                            'description' => '<p>Blacklist ekstensi script sudah lengkap, tapi direktori upload punya <code>AllowOverride All</code> aktif - file bernama persis <code>.htaccess</code> lolos validasi (ekstensinya "htaccess", bukan salah satu yang diblokir) dan langsung dihormati Apache untuk mendefinisikan ulang ekstensi mana yang dieksekusi sebagai PHP.</p><p><strong>Contoh:</strong> upload <code>.htaccess</code> berisi <code>AddType application/x-httpd-php .jpg</code>, lalu upload <code>shell.jpg</code>.</p>',
+                            'app' => 'upload', 'path' => 'lab5_obfuscated_extension.php',
+                        ],
+                        'polyglot' => [
+                            'title' => 'Remote code execution via polyglot web shell upload',
+                            'summary' => 'Validasi "harus benar-benar gambar" dilewati dengan file polyglot.',
+                            'description' => '<p>Ekstensi <code>.php</code> memang diizinkan, tapi aplikasi menambahkan pengecekan <code>getimagesize()</code> sebagai "keamanan tambahan". Fungsi itu hanya membaca header di awal file, sehingga file dengan header gambar valid diikuti kode PHP tetap lolos.</p><p><strong>Contoh:</strong> <code>printf \'GIF89a;\\n&lt;?php system($_GET["cmd"]); ?&gt;\' > shell.php</code></p>',
+                            'app' => 'upload', 'path' => 'lab6_polyglot.php',
+                        ],
+                        'race-condition' => [
+                            'title' => 'Web shell upload via race condition',
+                            'summary' => 'File disimpan dulu ke disk, baru divalidasi & dihapus belakangan.',
+                            'description' => '<p>Ada jendela waktu antara file disimpan ke direktori executable dan selesai divalidasi/dihapus. Selama jendela itu, file sudah live dan bisa diakses/dieksekusi.</p><p><strong>Contoh:</strong> upload <code>shell.php</code>, lalu akses <code>uploads/shell.php?cmd=id</code> secepatnya sebelum proses validasi selesai.</p>',
+                            'app' => 'upload', 'path' => 'lab7_race_condition.php',
                         ],
                     ],
                 ],
