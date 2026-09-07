@@ -110,6 +110,13 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [xss/README.md](xss/README.md) — 7 lab XSS
 - [command-injection/README.md](command-injection/README.md) — 4 lab Command Injection
 
+Kunci jawaban lengkap tiap lab (khusus trainer/pendamping — jangan dibagikan ke peserta
+sebelum sesi selesai):
+
+- [sql-injection/JAWABAN.md](sql-injection/JAWABAN.md)
+- [xss/JAWABAN.md](xss/JAWABAN.md)
+- [command-injection/JAWABAN.md](command-injection/JAWABAN.md)
+
 ## Saran alur pelatihan (1 hari, fokus Injection)
 
 1. **Konsep dasar** (15 menit): buka Portal → klik kategori **A05: Injection**, bahas
