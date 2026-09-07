@@ -15,9 +15,116 @@ function lab_url($app, $path) {
 function owasp_categories() {
     return [
         'a01-access-control' => [
-            'code' => 'A01:2025', 'title' => 'Broken Access Control', 'status' => 'soon',
+            'code' => 'A01:2025', 'title' => 'Broken Access Control', 'status' => 'active',
             'summary' => 'Pembatasan hak akses tidak diterapkan dengan benar.',
-            'description' => '<p>Terjadi ketika aplikasi gagal memastikan bahwa pengguna hanya bisa mengakses data atau fungsi yang menjadi haknya. Akibatnya, pengguna biasa bisa mengakses data pengguna lain, atau bahkan fungsi khusus admin.</p><p><strong>Contoh sederhana:</strong> URL <code>/invoice?id=1001</code> menampilkan invoice milik kita. Jika kita ubah manual menjadi <code>/invoice?id=1002</code> dan ternyata bisa melihat invoice milik orang lain tanpa otorisasi, itu disebut <em>Insecure Direct Object Reference (IDOR)</em>, salah satu bentuk Broken Access Control.</p>',
+            'description' => '<p>Terjadi ketika aplikasi gagal memastikan bahwa pengguna hanya bisa mengakses data atau fungsi yang menjadi haknya. Akibatnya, pengguna biasa bisa mengakses data pengguna lain, atau bahkan fungsi khusus admin.</p><p><strong>Contoh sederhana:</strong> URL <code>/invoice?id=1001</code> menampilkan invoice milik kita. Jika kita ubah manual menjadi <code>/invoice?id=1002</code> dan ternyata bisa melihat invoice milik orang lain tanpa otorisasi, itu disebut <em>Insecure Direct Object Reference (IDOR)</em>, salah satu bentuk Broken Access Control.</p><p>Lab hari ini mencakup tiga variasi Broken Access Control yang paling sering ditemukan di dunia nyata: <strong>Insecure Direct Object Reference (IDOR)</strong> (server mempercayai ID/identifier dari client tanpa mengecek kepemilikan), <strong>Broken Function-Level Access Control</strong> (user biasa bisa menjalankan fungsi yang seharusnya khusus admin - vertical privilege escalation), dan <strong>Cross-Site Request Forgery (CSRF)</strong> (aksi yang mengubah state dipicu diam-diam oleh halaman pihak ketiga, memanfaatkan sesi korban yang sedang login).</p>',
+            'vulns' => [
+                'idor' => [
+                    'title' => 'Insecure Direct Object Reference (IDOR)',
+                    'summary' => 'Server mempercayai ID yang dikirim client tanpa mengecek kepemilikan.',
+                    'description' => '<p>IDOR terjadi ketika aplikasi mengambil/mengubah data berdasarkan identifier (ID, token, nama file) yang dikirim langsung oleh client, tanpa memverifikasi bahwa data tersebut memang milik user yang sedang login.</p><p><strong>Contoh sederhana:</strong> <code>GET /invoice?id=5001</code> menampilkan invoice kita. Mengubah jadi <code>id=5002</code> dan tetap bisa melihat invoice user lain adalah bukti IDOR.</p>',
+                    'labs' => [
+                        'basic-read' => [
+                            'title' => 'Basic IDOR (baca data)',
+                            'summary' => 'Mengubah parameter ID untuk membaca data milik user lain.',
+                            'description' => '<p>Halaman "invoice saya" mengambil data lewat parameter <code>id</code> tanpa mengecek kepemilikan sama sekali.</p><p><strong>Contoh payload:</strong> <code>?id=5002</code> saat login sebagai user pemilik invoice <code>5001</code>.</p>',
+                            'app' => 'idor', 'path' => 'lab1_basic_idor.php',
+                        ],
+                        'write' => [
+                            'title' => 'IDOR pada aksi tulis',
+                            'summary' => 'Parameter ID yang sama dipakai untuk mengubah/menghapus data user lain.',
+                            'description' => '<p>Form update menyimpan ID target di hidden field yang bisa diubah bebas lewat DevTools/Burp sebelum submit, mengizinkan penulisan ke data milik user lain.</p><p><strong>Contoh:</strong> ubah <code>user_id=4</code> di request update profil untuk mengubah data akun admin.</p>',
+                            'app' => 'idor', 'path' => 'lab2_idor_write.php',
+                        ],
+                        'unpredictable-id' => [
+                            'title' => 'IDOR dengan ID tidak berurutan',
+                            'summary' => 'ID diganti token acak, tapi tetap bocor lewat kanal lain.',
+                            'description' => '<p>ID "sulit ditebak" (UUID/token acak) sering dianggap developer sebagai pengganti access control - padahal cuma <em>obscurity</em>. Begitu token bocor lewat kanal lain (log, feed aktivitas, dsb), data tetap bisa diakses siapa pun yang memilikinya.</p>',
+                            'app' => 'idor', 'path' => 'lab3_idor_unpredictable.php',
+                        ],
+                        'api' => [
+                            'title' => 'IDOR di endpoint API/JSON',
+                            'summary' => 'Endpoint API mengembalikan seluruh field, termasuk yang sensitif.',
+                            'description' => '<p>Endpoint yang dipanggil <code>fetch()</code> dari JavaScript bisa diakses langsung dan sering luput dari audit access control yang sama ketatnya dengan halaman HTML.</p><p><strong>Contoh:</strong> <code>?api=1&amp;id=4</code> mengembalikan password &amp; kartu kredit user lain.</p>',
+                            'app' => 'idor', 'path' => 'lab4_idor_api.php',
+                        ],
+                        'mass-assignment' => [
+                            'title' => 'Mass Assignment',
+                            'summary' => 'Field ekstra di request diterima mentah-mentah oleh server.',
+                            'description' => '<p>Server melakukan <code>array_merge($user, $_POST)</code> tanpa allowlist field yang boleh diubah, sehingga field seperti <code>role</code> bisa diselundupkan lewat request meski tidak ada di form aslinya.</p>',
+                            'app' => 'idor', 'path' => 'lab5_mass_assignment.php',
+                        ],
+                    ],
+                ],
+                'broken-function-access' => [
+                    'title' => 'Broken Function-Level Access Control',
+                    'summary' => 'User biasa bisa menjalankan fungsi yang seharusnya khusus admin.',
+                    'description' => '<p>Terjadi ketika aplikasi lupa memverifikasi role/permission sebelum menjalankan fungsi sensitif - dikenal juga sebagai <em>vertical privilege escalation</em>.</p><p><strong>Contoh sederhana:</strong> halaman <code>/admin</code> hanya mengecek "apakah sudah login", bukan "apakah role-nya admin".</p>',
+                    'labs' => [
+                        'unprotected-admin' => [
+                            'title' => 'Unprotected admin functionality',
+                            'summary' => 'Halaman admin diakses langsung tanpa cek role.',
+                            'description' => '<p>Server hanya mengecek status login, tidak pernah mengecek <code>role === admin</code>.</p>',
+                            'app' => 'bfla', 'path' => 'lab1_unprotected_admin.php',
+                        ],
+                        'hidden-url' => [
+                            'title' => 'Unprotected admin dengan URL "tersembunyi"',
+                            'summary' => 'URL admin tidak ditautkan di UI, tapi bocor lewat robots.txt.',
+                            'description' => '<p>Security through obscurity: URL tidak ada di menu manapun, tapi tercatat di <code>robots.txt</code> yang memang dipublikasikan untuk crawler.</p>',
+                            'app' => 'bfla', 'path' => 'lab2_hidden_url.php',
+                        ],
+                        'role-cookie' => [
+                            'title' => 'Role ditentukan cookie client-writable',
+                            'summary' => 'Keputusan akses memakai cookie yang bisa diubah bebas oleh client.',
+                            'description' => '<p>Halaman membaca <code>$_COOKIE[\'role\']</code> alih-alih data user tervalidasi di server. Cookie non-<code>HttpOnly</code> bisa diubah lewat <code>document.cookie</code>.</p>',
+                            'app' => 'bfla', 'path' => 'lab3_role_cookie.php',
+                        ],
+                        'method-bypass' => [
+                            'title' => 'Method-based access control bypass',
+                            'summary' => 'Cek role cuma jalan untuk GET, endpoint POST tidak dicek.',
+                            'description' => '<p>Tombol aksi disembunyikan di render GET, tapi handler yang benar-benar menjalankan aksi (POST) tidak pernah mengecek role.</p>',
+                            'app' => 'bfla', 'path' => 'lab4_method_bypass.php',
+                        ],
+                        'referer-bypass' => [
+                            'title' => 'Referer-based access control bypass',
+                            'summary' => 'Akses "dianggap sah" berdasarkan header Referer yang dipalsukan.',
+                            'description' => '<p>Header <code>Referer</code> sepenuhnya dikendalikan client dan bisa dipalsukan lewat curl/Burp - bukan bukti otorisasi apa pun.</p>',
+                            'app' => 'bfla', 'path' => 'lab5_referer_bypass.php',
+                        ],
+                    ],
+                ],
+                'csrf' => [
+                    'title' => 'Cross-Site Request Forgery (CSRF)',
+                    'summary' => 'Aksi sensitif dipicu diam-diam oleh halaman pihak ketiga.',
+                    'description' => '<p>CSRF memanfaatkan fakta bahwa browser otomatis menyertakan cookie session ke setiap request ke suatu domain, terlepas dari halaman mana yang memicu request itu. Tanpa proteksi tambahan, halaman attacker bisa memaksa browser korban mengirim request "atas nama" korban.</p>',
+                    'labs' => [
+                        'no-token' => [
+                            'title' => 'Tidak ada token CSRF',
+                            'summary' => 'Form aksi sensitif tanpa proteksi CSRF apa pun.',
+                            'description' => '<p>Server hanya mengandalkan cookie session yang valid, tanpa token CSRF sama sekali.</p>',
+                            'app' => 'csrf', 'path' => 'lab1_no_token.php',
+                        ],
+                        'token-not-tied' => [
+                            'title' => 'Token CSRF tidak diikat ke session',
+                            'summary' => 'Validasi hanya cek "token pernah diterbitkan", bukan pemiliknya.',
+                            'description' => '<p>Attacker bisa mendapat token valid milik sendiri, lalu memakainya untuk memalsukan request atas nama korban.</p>',
+                            'app' => 'csrf', 'path' => 'lab2_token_not_tied.php',
+                        ],
+                        'token-removal' => [
+                            'title' => 'Bypass dengan menghapus parameter token',
+                            'summary' => 'Validasi cuma jalan kalau parameter token dikirim.',
+                            'description' => '<p><code>if (isset($_POST[\'csrf_token\']))</code> - kalau parameter itu tidak ada sama sekali, validasi ter-skip begitu saja.</p>',
+                            'app' => 'csrf', 'path' => 'lab3_token_removal.php',
+                        ],
+                        'get-based' => [
+                            'title' => 'Aksi sensitif lewat GET request',
+                            'summary' => 'State-changing action dipicu hanya dengan satu tag &lt;img&gt;.',
+                            'description' => '<p>GET seharusnya <em>safe method</em> tanpa efek samping. Mengizinkan aksi sensitif lewat GET membuatnya bisa dipicu tanpa JavaScript maupun form sama sekali.</p>',
+                            'app' => 'csrf', 'path' => 'lab4_get_based.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a02-security-misconfiguration' => [
             'code' => 'A02:2025', 'title' => 'Security Misconfiguration', 'status' => 'soon',
@@ -30,9 +137,123 @@ function owasp_categories() {
             'description' => '<p>Aplikasi modern bergantung pada ratusan library pihak ketiga dan pipeline CI/CD otomatis. Jika salah satu mata rantai ini disusupi, aplikasi ikut terdampak walau kode yang kita tulis sendiri aman.</p><p><strong>Contoh sederhana:</strong> Penyerang mengunggah paket npm dengan nama mirip library populer (typosquatting, mis. <code>expres</code> alih-alih <code>express</code>); developer yang salah ketik saat install tanpa sadar menjalankan kode berbahaya tersebut.</p>',
         ],
         'a04-cryptographic-failures' => [
-            'code' => 'A04:2025', 'title' => 'Cryptographic Failures', 'status' => 'soon',
+            'code' => 'A04:2025', 'title' => 'Cryptographic Failures', 'status' => 'active',
             'summary' => 'Data sensitif tidak terlindungi karena kriptografi lemah/tidak ada.',
-            'description' => '<p>Terjadi saat data sensitif (password, kartu kredit, data pribadi) disimpan atau dikirim tanpa enkripsi yang memadai, atau memakai algoritma yang sudah usang.</p><p><strong>Contoh sederhana:</strong> Password pengguna disimpan sebagai MD5 tanpa salt di database. Jika database bocor, hash MD5 tanpa salt sangat mudah di-crack menjadi password asli.</p>',
+            'description' => '<p>Terjadi saat data sensitif (password, kartu kredit, data pribadi) disimpan atau dikirim tanpa enkripsi yang memadai, atau memakai algoritma yang sudah usang.</p><p><strong>Contoh sederhana:</strong> Password pengguna disimpan sebagai MD5 tanpa salt di database. Jika database bocor, hash MD5 tanpa salt sangat mudah di-crack menjadi password asli.</p><p>Lab hari ini mencakup empat variasi Cryptographic Failures: <strong>Weak Password Hashing</strong> (penyimpanan password yang mudah dipulihkan ke bentuk asli), <strong>Insecure Randomness</strong> (token/ID/kode yang seharusnya tidak bisa ditebak ternyata deterministik), <strong>Sensitive Data Exposure</strong> (data sensitif bocor lewat URL, cache, atau response yang tidak konsisten), dan <strong>JWT Vulnerabilities</strong> (token JSON Web Token yang tidak diverifikasi dengan aman).</p>',
+            'vulns' => [
+                'weak-hashing' => [
+                    'title' => 'Weak Password Hashing',
+                    'summary' => 'Password disimpan dengan cara yang mudah dipulihkan ke bentuk asli.',
+                    'description' => '<p>Password yang disimpan plaintext, di-hash dengan algoritma cepat tanpa salt (MD5/SHA1), atau cuma "disamarkan" (encoding) alih-alih benar-benar di-hash, membuat database yang bocor langsung membocorkan seluruh password penggunanya.</p>',
+                    'labs' => [
+                        'plaintext' => [
+                            'title' => 'Penyimpanan password plaintext',
+                            'summary' => 'Password disimpan apa adanya, terbaca langsung kalau database bocor.',
+                            'description' => '<p>Tidak ada transformasi kriptografi apa pun antara input password dan yang disimpan di database.</p>',
+                            'app' => 'hashing', 'path' => 'lab1_plaintext.php',
+                        ],
+                        'unsalted-md5' => [
+                            'title' => 'Hash MD5 tanpa salt',
+                            'summary' => 'Crackable dalam hitungan detik lewat dictionary attack/rainbow table.',
+                            'description' => '<p>MD5 didesain cepat dihitung (untuk checksum, bukan password) - tanpa salt, hash yang bocor bisa dicocokkan lewat lookup table online atau <code>hashcat -m 0</code>.</p>',
+                            'app' => 'hashing', 'path' => 'lab2_unsalted_md5.php',
+                        ],
+                        'reversible-encoding' => [
+                            'title' => '"Enkripsi" yang sebenarnya cuma encoding',
+                            'summary' => 'Cookie "remember me" pakai base64, bukan enkripsi sungguhan.',
+                            'description' => '<p>base64 adalah encoding (bisa dibalik siapa saja tanpa kunci apa pun), bukan enkripsi. Menamai variabelnya "encrypted" tidak mengubah sifat matematisnya.</p>',
+                            'app' => 'hashing', 'path' => 'lab3_reversible_encoding.php',
+                        ],
+                    ],
+                ],
+                'insecure-randomness' => [
+                    'title' => 'Insecure Randomness',
+                    'summary' => 'Token/ID/kode yang seharusnya tidak bisa ditebak ternyata deterministik.',
+                    'description' => '<p>Menggunakan <code>rand()</code>/<code>mt_rand()</code> (bukan CSPRNG) atau men-seed generator dengan nilai publik (waktu, ID user) membuat "nilai acak" bisa dihitung ulang oleh siapa pun yang tahu inputnya.</p>',
+                    'labs' => [
+                        'predictable-reset-token' => [
+                            'title' => 'Password reset token bisa diprediksi',
+                            'summary' => 'Token dibuat dari md5(username . time()).',
+                            'description' => '<p>Waktu server bocor lewat header <code>Date</code>, dan username sering publik - keduanya cukup untuk menghitung ulang token.</p>',
+                            'app' => 'randomness', 'path' => 'lab1_predictable_reset_token.php',
+                        ],
+                        'sequential-api-key' => [
+                            'title' => 'API key sekuensial',
+                            'summary' => 'API key cuma nilai auto-increment, bukan token acak.',
+                            'description' => '<p>Menaikkan satu angka dari API key sendiri langsung menemukan API key user lain.</p>',
+                            'app' => 'randomness', 'path' => 'lab2_sequential_api_key.php',
+                        ],
+                        'predictable-otp' => [
+                            'title' => 'OTP 2FA bisa diprediksi',
+                            'summary' => 'mt_srand($timestamp) membuat OTP sepenuhnya deterministik.',
+                            'description' => '<p><code>mt_rand()</code> bukan CSPRNG - kalau seed-nya (waktu generate) diketahui, seluruh output bisa dihitung ulang persis sama.</p>',
+                            'app' => 'randomness', 'path' => 'lab3_predictable_otp.php',
+                        ],
+                        'predictable-coupon' => [
+                            'title' => 'Kode kupon bisa ditebak',
+                            'summary' => 'Kode kupon mengikuti pola sekuensial dari nomor order.',
+                            'description' => '<p>"Kode unik" ternyata cuma representasi ulang nomor order yang sekuensial, tanpa komponen acak sama sekali.</p>',
+                            'app' => 'randomness', 'path' => 'lab4_predictable_coupon.php',
+                        ],
+                    ],
+                ],
+                'sensitive-data-exposure' => [
+                    'title' => 'Sensitive Data Exposure',
+                    'summary' => 'Data sensitif bocor lewat kanal yang tidak disadari developer.',
+                    'description' => '<p>Data sensitif bisa bocor bukan cuma karena enkripsi lemah, tapi juga lewat URL yang tercatat di banyak tempat, cache yang tidak dikontrol, atau response yang menampilkan lebih banyak data daripada seharusnya.</p>',
+                    'labs' => [
+                        'url-leak' => [
+                            'title' => 'Data sensitif di URL',
+                            'summary' => 'Nomor kartu di query string bocor lewat header Referer.',
+                            'description' => '<p>Browser mengirim URL lengkap (termasuk query string) sebagai Referer ke resource pihak ketiga mana pun yang dimuat halaman.</p>',
+                            'app' => 'dataexposure', 'path' => 'lab1_url_leak.php',
+                        ],
+                        'missing-cache-control' => [
+                            'title' => 'Header Cache-Control tidak diset',
+                            'summary' => 'Data akun bisa tersimpan di shared cache dan bocor ke user lain.',
+                            'description' => '<p>Tanpa <code>Cache-Control: no-store</code>, cache di antara server dan browser bisa menyimpan &amp; mengulang response berisi data pribadi ke pengunjung berikutnya.</p>',
+                            'app' => 'dataexposure', 'path' => 'lab2_missing_cache_control.php',
+                        ],
+                        'unmasked-response' => [
+                            'title' => 'Data sensitif tidak di-mask',
+                            'summary' => 'Masking diterapkan manual per-endpoint, jadi tidak konsisten.',
+                            'description' => '<p>Satu endpoint menerapkan masking kartu dengan benar, endpoint lain untuk data yang sama lupa menerapkannya.</p>',
+                            'app' => 'dataexposure', 'path' => 'lab3_unmasked_response.php',
+                        ],
+                    ],
+                ],
+                'jwt' => [
+                    'title' => 'JWT Vulnerabilities',
+                    'summary' => 'Token JSON Web Token tidak diverifikasi dengan aman.',
+                    'description' => '<p>JWT hanya seaman implementasi verifikasinya - kesalahan umum termasuk menerima algoritma <code>none</code>, secret HMAC yang lemah, tidak memverifikasi signature sama sekali, atau mempercayai header <code>kid</code> tanpa sanitasi.</p>',
+                    'labs' => [
+                        'alg-none' => [
+                            'title' => 'Algoritma alg=none diterima',
+                            'summary' => 'Server menerima token tanpa signature apa pun.',
+                            'description' => '<p><code>alg: none</code> seharusnya tidak pernah diterima untuk token otentikasi, tapi server ini mempercayai payloadnya begitu saja.</p>',
+                            'app' => 'jwt', 'path' => 'lab1_alg_none.php',
+                        ],
+                        'weak-secret' => [
+                            'title' => 'Secret HMAC lemah',
+                            'summary' => 'Secret pendek, brute-forceable lewat wordlist.',
+                            'description' => '<p>Kekuatan HS256 bergantung penuh pada kerahasiaan &amp; entropi secret-nya - secret umum bisa ditemukan lewat <code>hashcat -m 16500</code>.</p>',
+                            'app' => 'jwt', 'path' => 'lab2_weak_secret.php',
+                        ],
+                        'no-signature-check' => [
+                            'title' => 'Signature tidak pernah diverifikasi',
+                            'summary' => 'Server mempercayai payload apa adanya, signature bisa diisi apa saja.',
+                            'description' => '<p>Server hanya men-decode payload dan tidak pernah menghitung ulang &amp; membandingkan signature-nya.</p>',
+                            'app' => 'jwt', 'path' => 'lab3_no_signature_check.php',
+                        ],
+                        'kid-path-traversal' => [
+                            'title' => 'Path traversal lewat header kid',
+                            'summary' => 'Header kid dipakai untuk membaca file kunci tanpa sanitasi.',
+                            'description' => '<p>Mengarahkan <code>kid</code> ke <code>/dev/null</code> lewat path traversal membuat server memakai kunci HMAC yang sudah diketahui pasti: string kosong.</p>',
+                            'app' => 'jwt', 'path' => 'lab4_kid_path_traversal.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a05-injection' => [
             'code' => 'A05:2025', 'title' => 'Injection', 'status' => 'active',
@@ -274,9 +495,129 @@ function owasp_categories() {
             'description' => '<p>Berbeda dari kesalahan implementasi, Insecure Design adalah kelemahan yang sudah tertanam sejak tahap perancangan alur/fitur aplikasi - sehingga tidak bisa diperbaiki hanya dengan menambal kode, melainkan perlu didesain ulang.</p><p><strong>Contoh sederhana:</strong> Fitur "lupa password" mengirim kode OTP 4 digit tanpa batas percobaan (rate limiting), sehingga penyerang bisa mencoba 10.000 kombinasi dengan cepat sampai berhasil.</p>',
         ],
         'a07-authentication-failures' => [
-            'code' => 'A07:2025', 'title' => 'Authentication Failures', 'status' => 'soon',
+            'code' => 'A07:2025', 'title' => 'Authentication Failures', 'status' => 'active',
             'summary' => 'Kelemahan pada proses login & manajemen sesi.',
-            'description' => '<p>Mencakup segala kelemahan pada proses memverifikasi identitas pengguna dan menjaga sesi login mereka tetap aman setelahnya.</p><p><strong>Contoh sederhana:</strong> Setelah pengguna menekan "Logout", session token lama masih tetap valid dan bisa dipakai untuk mengakses akun jika tokennya berhasil dicuri sebelumnya.</p>',
+            'description' => '<p>Mencakup segala kelemahan pada proses memverifikasi identitas pengguna dan menjaga sesi login mereka tetap aman setelahnya.</p><p><strong>Contoh sederhana:</strong> Setelah pengguna menekan "Logout", session token lama masih tetap valid dan bisa dipakai untuk mengakses akun jika tokennya berhasil dicuri sebelumnya.</p><p>Lab hari ini mencakup empat variasi Authentication Failures: <strong>Username Enumeration</strong> (form login membocorkan validitas username lewat pesan/waktu/perilaku), <strong>Broken Brute-Force Protection</strong> (rate limiting/lockout yang tidak memadai atau bisa dilewati), <strong>Broken Session Management</strong> (token sesi yang tidak dikelola dengan aman), dan <strong>Password Reset Flaws</strong> (alur reset password yang cacat).</p>',
+            'vulns' => [
+                'username-enumeration' => [
+                    'title' => 'Username Enumeration',
+                    'summary' => 'Form login membocorkan validitas username lewat kanal tak disadari.',
+                    'description' => '<p>Sekali username tervalidasi lewat pesan error, panjang response, waktu respons, atau perilaku lockout, serangan berikutnya (password spraying, brute force terarah) jadi jauh lebih efisien.</p>',
+                    'labs' => [
+                        'different-message' => [
+                            'title' => 'Pesan error berbeda',
+                            'summary' => '"User tidak ditemukan" vs "Password salah".',
+                            'description' => '<p>Dua pesan error yang jelas berbeda membocorkan langsung validasi mana yang gagal.</p>',
+                            'app' => 'userenum', 'path' => 'lab1_different_message.php',
+                        ],
+                        'subtle-difference' => [
+                            'title' => 'Response nyaris identik',
+                            'summary' => 'Pesan sama secara visual, beda 1 karakter di response mentah.',
+                            'description' => '<p>Perbedaan sekecil apa pun (titik di akhir kalimat) tetap membedakan Content-Length response.</p>',
+                            'app' => 'userenum', 'path' => 'lab2_subtle_difference.php',
+                        ],
+                        'response-timing' => [
+                            'title' => 'Perbedaan waktu respons',
+                            'summary' => 'Username valid memicu proses verifikasi yang lebih lambat.',
+                            'description' => '<p>Pekerjaan tambahan (simulasi cost hashing password) hanya terjadi kalau username ditemukan - celah waktu ini jadi oracle validitas.</p>',
+                            'app' => 'userenum', 'path' => 'lab3_response_timing.php',
+                        ],
+                        'account-lockout' => [
+                            'title' => 'Account lockout membocorkan validitas',
+                            'summary' => 'Pesan "akun terkunci" hanya muncul untuk username yang valid.',
+                            'description' => '<p>Mekanisme keamanan (lockout) itu sendiri jadi oracle baru karena hanya "aktif" untuk username yang benar-benar ada.</p>',
+                            'app' => 'userenum', 'path' => 'lab4_account_lockout.php',
+                        ],
+                    ],
+                ],
+                'brute-force-protection' => [
+                    'title' => 'Broken Brute-Force Protection',
+                    'summary' => 'Rate limiting/lockout tidak memadai atau bisa dilewati.',
+                    'description' => '<p>Proteksi brute-force yang lemah membuat penebakan password otomatis jadi praktis, baik karena tidak ada limit sama sekali maupun karena limit yang ada bisa dihindari.</p>',
+                    'labs' => [
+                        'no-rate-limit' => [
+                            'title' => 'Tidak ada rate limiting',
+                            'summary' => 'Login bisa dicoba tanpa batas, tanpa CAPTCHA maupun lockout.',
+                            'description' => '<p>Setiap kandidat password dicoba tanpa hambatan apa pun - wordlist besar bisa dihabiskan dalam hitungan detik.</p>',
+                            'app' => 'bruteforce', 'path' => 'lab1_no_rate_limit.php',
+                        ],
+                        'xff-bypass' => [
+                            'title' => 'Lockout berbasis IP, bypass X-Forwarded-For',
+                            'summary' => 'Server mempercayai header X-Forwarded-For dari client.',
+                            'description' => '<p>Header ini sepenuhnya dikendalikan pengirim request - mengubahnya di tiap percobaan memberi "IP baru" setiap kali.</p>',
+                            'app' => 'bruteforce', 'path' => 'lab2_xff_bypass.php',
+                        ],
+                        'case-variation-bypass' => [
+                            'title' => 'Lockout bypass via variasi kapitalisasi',
+                            'summary' => 'Counter percobaan case-sensitive, padahal login case-insensitive.',
+                            'description' => '<p>"admin", "Admin", "ADMIN" masing-masing dapat jatah percobaan baru, padahal menyerang akun yang sama.</p>',
+                            'app' => 'bruteforce', 'path' => 'lab3_case_variation_bypass.php',
+                        ],
+                    ],
+                ],
+                'session-management' => [
+                    'title' => 'Broken Session Management',
+                    'summary' => 'Token sesi tidak dikelola dengan aman.',
+                    'description' => '<p>Mencakup token yang tidak di-invalidate saat logout, token yang bisa ditebak, session fixation, dan token yang bocor lewat kanal yang tidak seharusnya.</p>',
+                    'labs' => [
+                        'token-survives-logout' => [
+                            'title' => 'Token tetap valid setelah logout',
+                            'summary' => 'Logout cuma hapus cookie, token tidak di-invalidate di server.',
+                            'description' => '<p>Token lama yang berhasil dicuri sebelum logout tetap memberi akses penuh.</p>',
+                            'app' => 'sessionmgmt', 'path' => 'lab1_token_survives_logout.php',
+                        ],
+                        'predictable-session-id' => [
+                            'title' => 'Session ID sekuensial',
+                            'summary' => 'Token cuma angka urut, bukan nilai acak.',
+                            'description' => '<p>Sekali satu token diketahui, token di sekitarnya bisa ditebak lewat iterasi sederhana.</p>',
+                            'app' => 'sessionmgmt', 'path' => 'lab2_predictable_session_id.php',
+                        ],
+                        'session-fixation' => [
+                            'title' => 'Session Fixation',
+                            'summary' => 'Token dari luar tetap dipakai setelah login, tidak diregenerasi.',
+                            'description' => '<p>Attacker memilih token sendiri sebelum korban login - token itu "naik level" jadi sesi terotentikasi tanpa pernah diganti.</p>',
+                            'app' => 'sessionmgmt', 'path' => 'lab3_session_fixation.php',
+                        ],
+                        'token-in-url' => [
+                            'title' => 'Session token di URL',
+                            'summary' => 'Token otentikasi lewat parameter URL, tercatat di access log.',
+                            'description' => '<p>URL (termasuk query string) dicatat access log server, riwayat browser, dan bisa bocor lewat Referer.</p>',
+                            'app' => 'sessionmgmt', 'path' => 'lab4_token_in_url.php',
+                        ],
+                    ],
+                ],
+                'password-reset' => [
+                    'title' => 'Password Reset Flaws',
+                    'summary' => 'Alur reset password yang cacat.',
+                    'description' => '<p>Kesalahan umum pada fitur reset password: token/kode yang bocor, bisa dipakai ulang, terlalu mudah ditebak, atau link reset yang dibangun dari input tak tepercaya.</p>',
+                    'labs' => [
+                        'token-leak-email' => [
+                            'title' => 'Token bocor lewat tracking pixel email',
+                            'summary' => 'Email reset memuat gambar pelacak yang membawa token.',
+                            'description' => '<p>Gambar 1x1 dari domain analytics pihak ketiga di email transaksional bisa membawa token rahasia yang sama dengan link reset.</p>',
+                            'app' => 'pwreset', 'path' => 'lab1_token_leak_email.php',
+                        ],
+                        'token-reuse' => [
+                            'title' => 'Token bisa dipakai berulang kali',
+                            'summary' => 'Token tidak pernah ditandai "sudah dipakai".',
+                            'description' => '<p>Token yang seharusnya sekali pakai tetap berfungsi selamanya karena tidak ada mekanisme invalidasi.</p>',
+                            'app' => 'pwreset', 'path' => 'lab2_token_reuse.php',
+                        ],
+                        'brute-forceable-code' => [
+                            'title' => 'Kode reset pendek tanpa rate limiting',
+                            'summary' => 'Kode 4 digit, bisa dicoba tanpa batas.',
+                            'description' => '<p>Ruang kemungkinan yang kecil (10.000) dikombinasikan dengan tidak adanya rate limiting membuat brute force jadi praktis.</p>',
+                            'app' => 'pwreset', 'path' => 'lab3_brute_forceable_code.php',
+                        ],
+                        'host-header-poisoning' => [
+                            'title' => 'Password reset poisoning lewat Host header',
+                            'summary' => 'Link reset dibangun dari header Host yang dikendalikan client.',
+                            'description' => '<p>Header <code>Host</code> bisa diisi bebas oleh pengirim request - server keliru mempercayainya sebagai domain aplikasi saat membangun link reset.</p>',
+                            'app' => 'pwreset', 'path' => 'lab4_host_header_poisoning.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a08-software-data-integrity-failures' => [
             'code' => 'A08:2025', 'title' => 'Software or Data Integrity Failures', 'status' => 'soon',

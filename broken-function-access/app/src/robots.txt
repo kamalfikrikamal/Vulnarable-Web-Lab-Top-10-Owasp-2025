@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /internal_ops_7f3a.php
+Disallow: /data/

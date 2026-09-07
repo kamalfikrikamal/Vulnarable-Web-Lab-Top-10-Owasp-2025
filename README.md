@@ -2,10 +2,18 @@
 
 Portal navigasi + kumpulan aplikasi web yang sengaja dibuat rentan (PHP + Docker), disusun
 untuk materi pelatihan pentest web. Struktur mengikuti **OWASP Top 10:2025 (Release
-Candidate)** sebagai peta kategori, dengan kerentanan Injection (SQL Injection, XSS, OS
-Command Injection, Local File Inclusion, File Upload Vulnerabilities) sebagai konten yang
-sudah lengkap saat ini di kategori **A05:2025 — Injection**. Kategori lain sudah disiapkan
-slot-nya di portal dan tinggal diisi labnya belakangan tanpa perlu merombak struktur.
+Candidate)** sebagai peta kategori. Empat kategori sudah lengkap isinya:
+
+- **A01:2025 — Broken Access Control**: IDOR, Broken Function-Level Access Control, CSRF.
+- **A04:2025 — Cryptographic Failures**: Weak Password Hashing, Insecure Randomness,
+  Sensitive Data Exposure, JWT Vulnerabilities.
+- **A05:2025 — Injection**: SQL Injection, XSS, OS Command Injection, LFI, File Upload
+  Vulnerabilities.
+- **A07:2025 — Authentication Failures**: Username Enumeration, Broken Brute-Force
+  Protection, Broken Session Management, Password Reset Flaws.
+
+Kategori lain sudah disiapkan slot-nya di portal dan tinggal diisi labnya belakangan tanpa
+perlu merombak struktur.
 
 > ⚠️ **PERINGATAN KEAMANAN** — Semua aplikasi di repo ini SENGAJA dibuat rentan untuk tujuan
 > edukasi, termasuk `command-injection/`, `lfi/`, dan `file-upload/` yang benar-benar bisa
@@ -24,11 +32,22 @@ slot-nya di portal dan tinggal diisi labnya belakangan tanpa perlu merombak stru
 ├── DEPLOY.md              # Panduan deploy aman ke DigitalOcean
 ├── portal/                # Hub navigasi: OWASP Top 10 -> jenis kerentanan -> lab spesifik
 │   └── src/data.php       # Konfigurasi seluruh konten portal (edit di sini untuk menambah lab baru)
-├── sql-injection/         # PHP + MySQL - 7 lab SQL Injection
-├── xss/                   # PHP - 7 lab XSS
-├── command-injection/     # PHP - 4 lab OS Command Injection
-├── lfi/                   # PHP - 7 lab Local File Inclusion (LFI) / Path Traversal
-└── file-upload/           # PHP - 7 lab File Upload Vulnerabilities
+├── idor/                       # PHP - 5 lab Insecure Direct Object Reference (A01)
+├── broken-function-access/     # PHP - 5 lab Broken Function-Level Access Control (A01)
+├── csrf/                       # PHP - 4 lab Cross-Site Request Forgery (A01)
+├── weak-hashing/                # PHP - 3 lab Weak Password Hashing (A04)
+├── insecure-randomness/         # PHP - 4 lab Insecure Randomness (A04)
+├── sensitive-data-exposure/     # PHP - 3 lab Sensitive Data Exposure (A04)
+├── jwt-vulnerabilities/         # PHP - 4 lab JWT Vulnerabilities (A04)
+├── sql-injection/         # PHP + MySQL - 7 lab SQL Injection (A05)
+├── xss/                   # PHP - 7 lab XSS (A05)
+├── command-injection/     # PHP - 4 lab OS Command Injection (A05)
+├── lfi/                   # PHP - 7 lab Local File Inclusion (LFI) / Path Traversal (A05)
+├── file-upload/           # PHP - 7 lab File Upload Vulnerabilities (A05)
+├── username-enumeration/       # PHP - 4 lab Username Enumeration (A07)
+├── brute-force-protection/     # PHP - 3 lab Broken Brute-Force Protection (A07)
+├── session-management/         # PHP - 4 lab Broken Session Management (A07)
+└── password-reset/             # PHP - 4 lab Password Reset Flaws (A07)
 ```
 
 Kode tiap kerentanan tetap terpisah per folder (sesuai kategorinya), tapi **hanya ada satu
@@ -50,11 +69,22 @@ yang baru saja dibuat).
 | Service | URL | Keterangan |
 |---|---|---|
 | Portal | http://localhost:8079/ | Titik masuk utama — mulai dari sini |
-| SQL Injection | http://localhost:8079/sqli/ | Bisa juga diakses langsung tanpa lewat portal |
+| IDOR | http://localhost:8079/idor/ | Bisa juga diakses langsung tanpa lewat portal |
+| Broken Function-Level Access Control | http://localhost:8079/bfla/ | idem |
+| CSRF | http://localhost:8079/csrf/ | idem |
+| Weak Password Hashing | http://localhost:8079/hashing/ | idem |
+| Insecure Randomness | http://localhost:8079/randomness/ | idem |
+| Sensitive Data Exposure | http://localhost:8079/dataexposure/ | idem |
+| JWT Vulnerabilities | http://localhost:8079/jwt/ | idem |
+| SQL Injection | http://localhost:8079/sqli/ | idem |
 | XSS | http://localhost:8079/xss/ | idem |
 | Command Injection | http://localhost:8079/cmdi/ | idem |
 | Local File Inclusion (LFI) | http://localhost:8079/lfi/ | idem |
 | File Upload Vulnerabilities | http://localhost:8079/upload/ | idem |
+| Username Enumeration | http://localhost:8079/userenum/ | idem |
+| Broken Brute-Force Protection | http://localhost:8079/bruteforce/ | idem |
+| Broken Session Management | http://localhost:8079/sessionmgmt/ | idem |
+| Password Reset Flaws | http://localhost:8079/pwreset/ | idem |
 
 Semua di atas ada di **satu port** (8079) dan dibedakan lewat path, dijaga oleh `gateway`
 (Basic Auth) di level port tersebut — jadi cukup **login sekali**, browser otomatis
@@ -89,19 +119,20 @@ disalahgunakan.
 
 Struktur ini didesain agar mudah diperluas:
 
-1. Buat folder baru di root (mis. `broken-access-control/`) berisi `app/` (Dockerfile + src)
-   mengikuti pola folder yang sudah ada.
+1. Buat folder baru di root (mis. `security-misconfiguration/`) berisi `app/` (Dockerfile +
+   src) mengikuti pola folder yang sudah ada.
 2. Tambahkan service barunya ke `docker-compose.yml` di root (tanpa `ports:` — cukup
    reachable dari `gateway` lewat jaringan Docker internal, seperti `sqli-web`/`xss-web`/
-   `cmdi-web` yang sudah ada).
+   `idor-web` yang sudah ada).
 3. Tambah satu `location` block baru di `gateway/nginx.conf` dengan path prefix baru (mis.
-   `/bac/` untuk Broken Access Control), mengikuti pola `location /sqli/ { ... }` yang sudah
-   ada — ini satu-satunya bagian routing yang perlu disentuh manual, karena path gateway belum
-   data-driven dari `data.php`.
+   `/secmisconfig/` untuk Security Misconfiguration), mengikuti pola `location /sqli/ { ... }`
+   yang sudah ada — ini satu-satunya bagian routing yang perlu disentuh manual, karena path
+   gateway belum data-driven dari `data.php`.
 4. Edit `portal/src/data.php`: ubah `status` kategori terkait dari `'soon'` menjadi
    `'active'`, lalu isi array `vulns` dan `labs`-nya mengikuti pola yang sudah ada di kategori
-   `a05-injection` — field `'app'` tiap lab harus sama persis dengan path prefix yang dipakai
-   di langkah 3 (mis. `'app' => 'bac'`).
+   `a01-access-control`/`a04-cryptographic-failures`/`a05-injection`/`a07-authentication-failures`
+   — field `'app'` tiap lab harus sama persis dengan path prefix yang dipakai di langkah 3
+   (mis. `'app' => 'secmisconfig'`).
 
 Tidak perlu mengubah `index.php`, `category.php`, `vuln.php`, atau `lab.php` di portal — semua
 konten portal bersifat data-driven dari `data.php`, kecuali routing path di `gateway/nginx.conf`
@@ -111,41 +142,71 @@ konten portal bersifat data-driven dari `data.php`, kecuali routing path di `gat
 
 Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin mitigasi:
 
+**A01: Broken Access Control**
+- [idor/README.md](idor/README.md) — 5 lab Insecure Direct Object Reference (IDOR)
+- [broken-function-access/README.md](broken-function-access/README.md) — 5 lab Broken Function-Level Access Control
+- [csrf/README.md](csrf/README.md) — 4 lab Cross-Site Request Forgery (CSRF)
+
+**A04: Cryptographic Failures**
+- [weak-hashing/README.md](weak-hashing/README.md) — 3 lab Weak Password Hashing
+- [insecure-randomness/README.md](insecure-randomness/README.md) — 4 lab Insecure Randomness
+- [sensitive-data-exposure/README.md](sensitive-data-exposure/README.md) — 3 lab Sensitive Data Exposure
+- [jwt-vulnerabilities/README.md](jwt-vulnerabilities/README.md) — 4 lab JWT Vulnerabilities
+
+**A05: Injection**
 - [sql-injection/README.md](sql-injection/README.md) — 7 lab SQL Injection
 - [xss/README.md](xss/README.md) — 7 lab XSS
 - [command-injection/README.md](command-injection/README.md) — 4 lab Command Injection
 - [lfi/README.md](lfi/README.md) — 7 lab Local File Inclusion (LFI) / Path Traversal
 - [file-upload/README.md](file-upload/README.md) — 7 lab File Upload Vulnerabilities
 
+**A07: Authentication Failures**
+- [username-enumeration/README.md](username-enumeration/README.md) — 4 lab Username Enumeration
+- [brute-force-protection/README.md](brute-force-protection/README.md) — 3 lab Broken Brute-Force Protection
+- [session-management/README.md](session-management/README.md) — 4 lab Broken Session Management
+- [password-reset/README.md](password-reset/README.md) — 4 lab Password Reset Flaws
+
 Kunci jawaban lengkap tiap lab (khusus trainer/pendamping — jangan dibagikan ke peserta
 sebelum sesi selesai):
 
-- [sql-injection/JAWABAN.md](sql-injection/JAWABAN.md)
-- [xss/JAWABAN.md](xss/JAWABAN.md)
-- [command-injection/JAWABAN.md](command-injection/JAWABAN.md)
-- [lfi/JAWABAN.md](lfi/JAWABAN.md)
-- [file-upload/JAWABAN.md](file-upload/JAWABAN.md)
+- [idor/JAWABAN.md](idor/JAWABAN.md), [broken-function-access/JAWABAN.md](broken-function-access/JAWABAN.md), [csrf/JAWABAN.md](csrf/JAWABAN.md)
+- [weak-hashing/JAWABAN.md](weak-hashing/JAWABAN.md), [insecure-randomness/JAWABAN.md](insecure-randomness/JAWABAN.md), [sensitive-data-exposure/JAWABAN.md](sensitive-data-exposure/JAWABAN.md), [jwt-vulnerabilities/JAWABAN.md](jwt-vulnerabilities/JAWABAN.md)
+- [sql-injection/JAWABAN.md](sql-injection/JAWABAN.md), [xss/JAWABAN.md](xss/JAWABAN.md), [command-injection/JAWABAN.md](command-injection/JAWABAN.md), [lfi/JAWABAN.md](lfi/JAWABAN.md), [file-upload/JAWABAN.md](file-upload/JAWABAN.md)
+- [username-enumeration/JAWABAN.md](username-enumeration/JAWABAN.md), [brute-force-protection/JAWABAN.md](brute-force-protection/JAWABAN.md), [session-management/JAWABAN.md](session-management/JAWABAN.md), [password-reset/JAWABAN.md](password-reset/JAWABAN.md)
 
-## Saran alur pelatihan (2 hari, fokus Injection)
+## Saran alur pelatihan (4 hari, mengikuti 4 kategori yang sudah lengkap)
 
-**Hari 1**
+**Hari 1 — A05: Injection**
 1. **Konsep dasar** (15 menit): buka Portal → klik kategori **A05: Injection**, bahas
    penjelasan & contoh di halaman tersebut bersama-sama.
-2. **SQL Injection** (~2 jam): dari halaman kategori, klik **SQL Injection**, lalu kerjakan
-   Lab 1 → 7 satu per satu lewat portal.
-3. **XSS** (~1.5 jam): kembali ke halaman kategori (tombol breadcrumb), klik **XSS**, kerjakan
-   Lab 1 → 7.
-4. **Command Injection** (~1 jam): klik **OS Command Injection**, kerjakan Lab 1 → 4, tutup
-   dengan diskusi risiko memanggil shell dari aplikasi web.
+2. **SQL Injection** (~2 jam): Lab 1 → 7.
+3. **XSS** (~1.5 jam): Lab 1 → 7.
+4. **Command Injection** (~1 jam): Lab 1 → 4.
+5. **Local File Inclusion (LFI)** (~1.5 jam): Lab 1 → 7.
+6. **File Upload Vulnerabilities** (~1.5 jam): Lab 1 → 7.
 
-**Hari 2**
-5. **Local File Inclusion (LFI)** (~1.5 jam): klik **Local File Inclusion (LFI)**, kerjakan
-   Lab 1 → 7 (5 variasi filter bypass ala PortSwigger, lalu LFI-to-RCE lewat PHP wrapper &
-   log poisoning).
-6. **File Upload Vulnerabilities** (~1.5 jam): klik **File Upload Vulnerabilities**, kerjakan
-   Lab 1 → 7 (dari upload tanpa validasi sampai race condition).
-7. **Diskusi mitigasi** (30 menit): bandingkan kode vulnerable vs perbaikannya untuk seluruh 5
-   jenis kerentanan — lihat bagian "Mitigasi" di tiap README folder.
+**Hari 2 — A01: Broken Access Control**
+1. **Konsep dasar** (15 menit): kategori **A01: Broken Access Control**.
+2. **IDOR** (~1.5 jam): Lab 1 → 5.
+3. **Broken Function-Level Access Control** (~1.5 jam): Lab 1 → 5.
+4. **CSRF** (~1.5 jam): Lab 1 → 4, tutup dengan diskusi `SameSite` cookie sebagai mitigasi
+   tambahan (bukan pengganti token).
+
+**Hari 3 — A04: Cryptographic Failures**
+1. **Konsep dasar** (15 menit): kategori **A04: Cryptographic Failures**.
+2. **Weak Password Hashing** (~1 jam): Lab 1 → 3.
+3. **Insecure Randomness** (~1.5 jam): Lab 1 → 4.
+4. **Sensitive Data Exposure** (~1.5 jam): Lab 1 → 3.
+5. **JWT Vulnerabilities** (~1.5 jam): Lab 1 → 4.
+
+**Hari 4 — A07: Authentication Failures**
+1. **Konsep dasar** (15 menit): kategori **A07: Authentication Failures**.
+2. **Username Enumeration** (~1 jam): Lab 1 → 4.
+3. **Broken Brute-Force Protection** (~1 jam): Lab 1 → 3.
+4. **Broken Session Management** (~1.5 jam): Lab 1 → 4.
+5. **Password Reset Flaws** (~1.5 jam): Lab 1 → 4.
+6. **Diskusi mitigasi** (30 menit): bandingkan kode vulnerable vs perbaikannya di seluruh 4
+   hari — lihat bagian "Mitigasi" di tiap README folder.
 
 ## Tooling yang disarankan untuk peserta
 - Browser + DevTools
@@ -163,11 +224,15 @@ sebelum sesi selesai):
 - Kategori OWASP Top 10:2025 yang dipakai portal mengacu pada Release Candidate yang beredar
   saat dokumen ini ditulis; sesuaikan urutan/penamaan di `portal/src/data.php` bila versi
   final berbeda.
-- `portal`, `sqli-web`, `xss-web`, `cmdi-web`, `lfi-web`, dan `upload-web` **tidak** publish
-  port ke host sama sekali — semua akses publik lewat satu port `gateway` (8079, nginx +
-  Basic Auth) yang meneruskan request ke masing-masing service lewat jaringan Docker internal
-  berdasarkan path (`/sqli/`, `/xss/`, `/cmdi/`, `/lfi/`, `/upload/`). Karena hanya ada satu
-  origin (satu port), login Basic Auth cukup sekali dan otomatis berlaku untuk semua path/lab.
+- Tidak satu pun service lab (`portal`, `sqli-web`, `xss-web`, `cmdi-web`, `lfi-web`,
+  `upload-web`, `idor-web`, `bfla-web`, `csrf-web`, `hashing-web`, `randomness-web`,
+  `dataexposure-web`, `jwt-web`, `userenum-web`, `bruteforce-web`, `sessionmgmt-web`,
+  `pwreset-web`) mem-publish port ke host — semua akses publik lewat satu port `gateway`
+  (8079, nginx + Basic Auth) yang meneruskan request lewat jaringan Docker internal
+  berdasarkan path (`/sqli/`, `/xss/`, `/cmdi/`, `/lfi/`, `/upload/`, `/idor/`, `/bfla/`,
+  `/csrf/`, `/hashing/`, `/randomness/`, `/dataexposure/`, `/jwt/`, `/userenum/`,
+  `/bruteforce/`, `/sessionmgmt/`, `/pwreset/`). Karena hanya ada satu origin (satu port),
+  login Basic Auth cukup sekali dan otomatis berlaku untuk semua path/lab.
 - `gateway/.htpasswd` **tidak boleh** memakai kredensial default/contoh saat online di server
   publik — lihat [DEPLOY.md](DEPLOY.md) langkah generate kredensial. File ini masuk
   `.gitignore` supaya tidak ikut ter-commit kalau repo di-push ke Git.

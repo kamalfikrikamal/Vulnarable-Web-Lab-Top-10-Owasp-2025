@@ -10,6 +10,17 @@ services:
       - cmdi-web
       - lfi-web
       - upload-web
+      - idor-web
+      - bfla-web
+      - csrf-web
+      - hashing-web
+      - randomness-web
+      - dataexposure-web
+      - jwt-web
+      - userenum-web
+      - bruteforce-web
+      - sessionmgmt-web
+      - pwreset-web
     restart: unless-stopped
 
   portal:
@@ -56,6 +67,50 @@ services:
     volumes:
       - upload_uploads:/var/www/html/uploads
       - upload_safe:/var/www/html/uploads_safe
+    restart: unless-stopped
+
+  idor-web:
+    build: ./idor/app
+    restart: unless-stopped
+
+  bfla-web:
+    build: ./broken-function-access/app
+    restart: unless-stopped
+
+  csrf-web:
+    build: ./csrf/app
+    restart: unless-stopped
+
+  hashing-web:
+    build: ./weak-hashing/app
+    restart: unless-stopped
+
+  randomness-web:
+    build: ./insecure-randomness/app
+    restart: unless-stopped
+
+  dataexposure-web:
+    build: ./sensitive-data-exposure/app
+    restart: unless-stopped
+
+  jwt-web:
+    build: ./jwt-vulnerabilities/app
+    restart: unless-stopped
+
+  userenum-web:
+    build: ./username-enumeration/app
+    restart: unless-stopped
+
+  bruteforce-web:
+    build: ./brute-force-protection/app
+    restart: unless-stopped
+
+  sessionmgmt-web:
+    build: ./session-management/app
+    restart: unless-stopped
+
+  pwreset-web:
+    build: ./password-reset/app
     restart: unless-stopped
 
 volumes:
