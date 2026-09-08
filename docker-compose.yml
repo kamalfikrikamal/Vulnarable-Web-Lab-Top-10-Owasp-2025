@@ -21,6 +21,12 @@ services:
       - bruteforce-web
       - sessionmgmt-web
       - pwreset-web
+      - secmisconfig-web
+      - supplychain-web
+      - insecuredesign-web
+      - dataintegrity-web
+      - loggingfail-web
+      - exceptcond-web
     restart: unless-stopped
 
   portal:
@@ -111,6 +117,30 @@ services:
 
   pwreset-web:
     build: ./password-reset/app
+    restart: unless-stopped
+
+  secmisconfig-web:
+    build: ./security-misconfiguration/app
+    restart: unless-stopped
+
+  supplychain-web:
+    build: ./software-supply-chain/app
+    restart: unless-stopped
+
+  insecuredesign-web:
+    build: ./insecure-design/app
+    restart: unless-stopped
+
+  dataintegrity-web:
+    build: ./data-integrity/app
+    restart: unless-stopped
+
+  loggingfail-web:
+    build: ./logging-failures/app
+    restart: unless-stopped
+
+  exceptcond-web:
+    build: ./exceptional-conditions/app
     restart: unless-stopped
 
 volumes:

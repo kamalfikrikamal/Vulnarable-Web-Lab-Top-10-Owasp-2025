@@ -1,0 +1,16 @@
+<?php
+// config.php.bak
+// Backup konfigurasi lama sebelum migrasi server - lupa dihapus dari
+// webroot. Karena diakses lewat directory listing (bukan lewat PHP
+// interpreter, dan lagipula ekstensinya ".bak" bukan ".php"), isi file
+// ini akan tampil sebagai TEKS MENTAH ke browser, bukan dieksekusi.
+
+return [
+    'db_host'     => 'db-prod.internal',
+    'db_name'     => 'shop_prod',
+    'db_user'     => 'shop_app',
+    'db_password' => 'Adm1n_S3cret_2024',
+    'api_secret'  => 'sk_internal_7f3a9c2e1b4d6a80',
+    'mail_smtp_password' => 'Sm7p_M4il_2024!',
+    'debug' => true,
+];

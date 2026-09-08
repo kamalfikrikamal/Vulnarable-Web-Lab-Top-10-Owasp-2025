@@ -1,0 +1,9 @@
+{
+  "project": "acme-shop-frontend",
+  "dependencies": {
+    "acme-internal-ui-kit": "^2.3.0",
+    "acme-payment-sdk": "^1.0.4",
+    "lodash": "^4.17.21"
+  },
+  "registry": "https://npm.acme-corp.internal (unreachable from public internet, falls back to https://registry.npmjs.org if package not found internally)"
+}

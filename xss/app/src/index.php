@@ -46,4 +46,32 @@ untuk payload dan penjelasan tiap lab.</p>
   <a class="btn" href="lab7_useragent.php">Open Lab</a>
 </div>
 
+<div class="lab-card">
+  <h3>Lab 8 &mdash; XSS via javascript: URI (atribut href)</h3>
+  <p>Atribut href di-escape dengan benar, tapi tidak ada allowlist skema URL sehingga
+  <code>javascript:</code> tetap lolos dan tereksekusi saat link diklik.</p>
+  <a class="btn" href="lab8_javascript_uri.php">Open Lab</a>
+</div>
+
+<div class="lab-card">
+  <h3>Lab 9 &mdash; Stored XSS via upload avatar SVG</h3>
+  <p>File avatar diterima tanpa validasi content-type/magic byte; file SVG berisi script
+  dieksekusi browser saat dibuka langsung lewat URL.</p>
+  <a class="btn" href="lab9_svg_upload.php">Open Lab</a>
+</div>
+
+<div class="lab-card">
+  <h3>Lab 10 &mdash; DOM-based XSS via postMessage</h3>
+  <p>Halaman menerima pesan <code>postMessage</code> dari origin mana pun dan menulisnya
+  langsung ke innerHTML tanpa validasi <code>event.origin</code>.</p>
+  <a class="btn" href="lab10_postmessage_xss.php">Open Lab</a>
+</div>
+
+<div class="lab-card">
+  <h3>Lab 11 &mdash; Reflected XSS meski ada CSP (unsafe-inline)</h3>
+  <p>Header Content-Security-Policy terpasang, tapi <code>'unsafe-inline'</code> membuatnya
+  tidak melindungi apa pun dari inline script.</p>
+  <a class="btn" href="lab11_csp_bypass.php">Open Lab</a>
+</div>
+
 <?php include 'footer.php'; ?>

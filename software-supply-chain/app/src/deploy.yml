@@ -1,0 +1,14 @@
+name: Deploy to Production
+on:
+  push:
+    branches: [main]
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy via internal API
+        run: |
+          curl -X POST https://deploy.acme-corp.internal/api/deploy \
+            -H "Authorization: Bearer DEPLOY_TOKEN_9f8a7b6c5d4e3f2a1b0c" \
+            -d '{"env":"production","branch":"main"}'

@@ -17,6 +17,10 @@
   <a href="lab5_blind_time.php">Lab 5: Blind Time</a>
   <a href="lab6_second_order.php">Lab 6: Second-Order</a>
   <a href="lab7_order_by.php">Lab 7: ORDER BY</a>
+  <a href="lab8_stacked_queries.php">Lab 8: Stacked Queries</a>
+  <a href="lab9_filter_bypass.php">Lab 9: Filter Bypass</a>
+  <a href="lab10_insert_based.php">Lab 10: INSERT-based</a>
+  <a href="lab11_cookie_based.php">Lab 11: Cookie-based</a>
 </nav>
 <div class="container">
 <h1><?php echo $title; ?></h1>

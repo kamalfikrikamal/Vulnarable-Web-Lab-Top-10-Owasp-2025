@@ -46,4 +46,28 @@ injectable parameter. See the project <code>README.md</code> for full instructio
   <a class="btn" href="lab7_order_by.php">Open Lab</a>
 </div>
 
+<div class="lab-card">
+  <h3>Lab 8 &mdash; Stacked Queries</h3>
+  <p>A "quick note" feature runs raw input through mysqli_multi_query(), allowing a second, attacker-supplied SQL statement to execute after the intended one.</p>
+  <a class="btn" href="lab8_stacked_queries.php">Open Lab</a>
+</div>
+
+<div class="lab-card">
+  <h3>Lab 9 &mdash; Filter/WAF Bypass</h3>
+  <p>A naive keyword blacklist blocks the literal phrase "union select" but is defeated with an inline SQL comment as a separator.</p>
+  <a class="btn" href="lab9_filter_bypass.php">Open Lab</a>
+</div>
+
+<div class="lab-card">
+  <h3>Lab 10 &mdash; SQL Injection in an INSERT statement</h3>
+  <p>A registration form's "bio" field is concatenated into an INSERT statement, exploitable with an error-based payload to leak data from the users table.</p>
+  <a class="btn" href="lab10_insert_based.php">Open Lab</a>
+</div>
+
+<div class="lab-card">
+  <h3>Lab 11 &mdash; SQL Injection via a Cookie</h3>
+  <p>A "recently viewed" tracking cookie is trusted and concatenated into a query &mdash; a channel easy to miss when reviews only look at URL/form parameters.</p>
+  <a class="btn" href="lab11_cookie_based.php">Open Lab</a>
+</div>
+
 <?php include 'footer.php'; ?>

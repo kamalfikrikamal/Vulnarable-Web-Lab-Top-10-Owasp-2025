@@ -2,18 +2,28 @@
 
 Portal navigasi + kumpulan aplikasi web yang sengaja dibuat rentan (PHP + Docker), disusun
 untuk materi pelatihan pentest web. Struktur mengikuti **OWASP Top 10:2025 (Release
-Candidate)** sebagai peta kategori. Empat kategori sudah lengkap isinya:
+Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isinya:
 
 - **A01:2025 — Broken Access Control**: IDOR, Broken Function-Level Access Control, CSRF.
+- **A02:2025 — Security Misconfiguration**: debug mode aktif, kredensial default, directory
+  listing, debug endpoint tertinggal, CORS misconfiguration, header keamanan hilang
+  (clickjacking).
+- **A03:2025 — Software Supply Chain Failures**: Prototype Pollution, dependency confusion,
+  secret CI/CD ter-expose, auto-update tanpa verifikasi, postinstall script berbahaya.
 - **A04:2025 — Cryptographic Failures**: Weak Password Hashing, Insecure Randomness,
   Sensitive Data Exposure, JWT Vulnerabilities.
-- **A05:2025 — Injection**: SQL Injection, XSS, OS Command Injection, LFI, File Upload
-  Vulnerabilities.
+- **A05:2025 — Injection**: SQL Injection (11 lab), XSS (11 lab), OS Command Injection, LFI,
+  File Upload Vulnerabilities.
+- **A06:2025 — Insecure Design**: price tampering, negative quantity, coupon stacking, skip
+  step checkout, abuse bonus referral tanpa batas.
 - **A07:2025 — Authentication Failures**: Username Enumeration, Broken Brute-Force
   Protection, Broken Session Management, Password Reset Flaws.
-
-Kategori lain sudah disiapkan slot-nya di portal dan tinggal diisi labnya belakangan tanpa
-perlu merombak struktur.
+- **A08:2025 — Software or Data Integrity Failures**: PHP Object Injection, state cookie
+  tanpa signature, signature check rentan timing attack, update tanpa checksum.
+- **A09:2025 — Logging & Alerting Failures**: log injection/forgery, log injection → stored
+  XSS di dashboard admin, tidak ada alert brute-force, data sensitif tercatat di log.
+- **A10:2025 — Mishandling of Exceptional Conditions**: fail-open saat gateway timeout, error
+  message bocor, race condition redeem gift card, fail-open di blok catch keamanan.
 
 > ⚠️ **PERINGATAN KEAMANAN** — Semua aplikasi di repo ini SENGAJA dibuat rentan untuk tujuan
 > edukasi, termasuk `command-injection/`, `lfi/`, dan `file-upload/` yang benar-benar bisa
@@ -35,19 +45,25 @@ perlu merombak struktur.
 ├── idor/                       # PHP - 5 lab Insecure Direct Object Reference (A01)
 ├── broken-function-access/     # PHP - 5 lab Broken Function-Level Access Control (A01)
 ├── csrf/                       # PHP - 4 lab Cross-Site Request Forgery (A01)
+├── security-misconfiguration/   # PHP - 6 lab Security Misconfiguration (A02)
+├── software-supply-chain/       # PHP - 5 lab Software Supply Chain Failures (A03)
 ├── weak-hashing/                # PHP - 3 lab Weak Password Hashing (A04)
 ├── insecure-randomness/         # PHP - 4 lab Insecure Randomness (A04)
 ├── sensitive-data-exposure/     # PHP - 3 lab Sensitive Data Exposure (A04)
 ├── jwt-vulnerabilities/         # PHP - 4 lab JWT Vulnerabilities (A04)
-├── sql-injection/         # PHP + MySQL - 7 lab SQL Injection (A05)
-├── xss/                   # PHP - 7 lab XSS (A05)
+├── sql-injection/         # PHP + MySQL - 11 lab SQL Injection (A05)
+├── xss/                   # PHP - 11 lab XSS (A05)
 ├── command-injection/     # PHP - 4 lab OS Command Injection (A05)
 ├── lfi/                   # PHP - 7 lab Local File Inclusion (LFI) / Path Traversal (A05)
 ├── file-upload/           # PHP - 7 lab File Upload Vulnerabilities (A05)
+├── insecure-design/             # PHP - 5 lab Insecure Design / business logic (A06)
 ├── username-enumeration/       # PHP - 4 lab Username Enumeration (A07)
 ├── brute-force-protection/     # PHP - 3 lab Broken Brute-Force Protection (A07)
 ├── session-management/         # PHP - 4 lab Broken Session Management (A07)
-└── password-reset/             # PHP - 4 lab Password Reset Flaws (A07)
+├── password-reset/             # PHP - 4 lab Password Reset Flaws (A07)
+├── data-integrity/               # PHP - 4 lab Software or Data Integrity Failures (A08)
+├── logging-failures/             # PHP - 4 lab Logging & Alerting Failures (A09)
+└── exceptional-conditions/       # PHP - 4 lab Mishandling of Exceptional Conditions (A10)
 ```
 
 Kode tiap kerentanan tetap terpisah per folder (sesuai kategorinya), tapi **hanya ada satu
@@ -72,6 +88,8 @@ yang baru saja dibuat).
 | IDOR | http://localhost:8079/idor/ | Bisa juga diakses langsung tanpa lewat portal |
 | Broken Function-Level Access Control | http://localhost:8079/bfla/ | idem |
 | CSRF | http://localhost:8079/csrf/ | idem |
+| Security Misconfiguration | http://localhost:8079/secmisconfig/ | idem |
+| Software Supply Chain Failures | http://localhost:8079/supplychain/ | idem |
 | Weak Password Hashing | http://localhost:8079/hashing/ | idem |
 | Insecure Randomness | http://localhost:8079/randomness/ | idem |
 | Sensitive Data Exposure | http://localhost:8079/dataexposure/ | idem |
@@ -81,10 +99,14 @@ yang baru saja dibuat).
 | Command Injection | http://localhost:8079/cmdi/ | idem |
 | Local File Inclusion (LFI) | http://localhost:8079/lfi/ | idem |
 | File Upload Vulnerabilities | http://localhost:8079/upload/ | idem |
+| Insecure Design | http://localhost:8079/insecuredesign/ | idem |
 | Username Enumeration | http://localhost:8079/userenum/ | idem |
 | Broken Brute-Force Protection | http://localhost:8079/bruteforce/ | idem |
 | Broken Session Management | http://localhost:8079/sessionmgmt/ | idem |
 | Password Reset Flaws | http://localhost:8079/pwreset/ | idem |
+| Software or Data Integrity Failures | http://localhost:8079/dataintegrity/ | idem |
+| Logging & Alerting Failures | http://localhost:8079/loggingfail/ | idem |
+| Mishandling of Exceptional Conditions | http://localhost:8079/exceptcond/ | idem |
 
 Semua di atas ada di **satu port** (8079) dan dibedakan lewat path, dijaga oleh `gateway`
 (Basic Auth) di level port tersebut — jadi cukup **login sekali**, browser otomatis
@@ -147,6 +169,12 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [broken-function-access/README.md](broken-function-access/README.md) — 5 lab Broken Function-Level Access Control
 - [csrf/README.md](csrf/README.md) — 4 lab Cross-Site Request Forgery (CSRF)
 
+**A02: Security Misconfiguration**
+- [security-misconfiguration/README.md](security-misconfiguration/README.md) — 6 lab Security Misconfiguration
+
+**A03: Software Supply Chain Failures**
+- [software-supply-chain/README.md](software-supply-chain/README.md) — 5 lab Software Supply Chain Failures
+
 **A04: Cryptographic Failures**
 - [weak-hashing/README.md](weak-hashing/README.md) — 3 lab Weak Password Hashing
 - [insecure-randomness/README.md](insecure-randomness/README.md) — 4 lab Insecure Randomness
@@ -154,11 +182,14 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [jwt-vulnerabilities/README.md](jwt-vulnerabilities/README.md) — 4 lab JWT Vulnerabilities
 
 **A05: Injection**
-- [sql-injection/README.md](sql-injection/README.md) — 7 lab SQL Injection
-- [xss/README.md](xss/README.md) — 7 lab XSS
+- [sql-injection/README.md](sql-injection/README.md) — 11 lab SQL Injection
+- [xss/README.md](xss/README.md) — 11 lab XSS
 - [command-injection/README.md](command-injection/README.md) — 4 lab Command Injection
 - [lfi/README.md](lfi/README.md) — 7 lab Local File Inclusion (LFI) / Path Traversal
 - [file-upload/README.md](file-upload/README.md) — 7 lab File Upload Vulnerabilities
+
+**A06: Insecure Design**
+- [insecure-design/README.md](insecure-design/README.md) — 5 lab Insecure Design / business logic
 
 **A07: Authentication Failures**
 - [username-enumeration/README.md](username-enumeration/README.md) — 4 lab Username Enumeration
@@ -166,15 +197,30 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [session-management/README.md](session-management/README.md) — 4 lab Broken Session Management
 - [password-reset/README.md](password-reset/README.md) — 4 lab Password Reset Flaws
 
+**A08: Software or Data Integrity Failures**
+- [data-integrity/README.md](data-integrity/README.md) — 4 lab Software or Data Integrity Failures
+
+**A09: Logging & Alerting Failures**
+- [logging-failures/README.md](logging-failures/README.md) — 4 lab Logging & Alerting Failures
+
+**A10: Mishandling of Exceptional Conditions**
+- [exceptional-conditions/README.md](exceptional-conditions/README.md) — 4 lab Mishandling of Exceptional Conditions
+
 Kunci jawaban lengkap tiap lab (khusus trainer/pendamping — jangan dibagikan ke peserta
 sebelum sesi selesai):
 
 - [idor/JAWABAN.md](idor/JAWABAN.md), [broken-function-access/JAWABAN.md](broken-function-access/JAWABAN.md), [csrf/JAWABAN.md](csrf/JAWABAN.md)
+- [security-misconfiguration/JAWABAN.md](security-misconfiguration/JAWABAN.md)
+- [software-supply-chain/JAWABAN.md](software-supply-chain/JAWABAN.md)
 - [weak-hashing/JAWABAN.md](weak-hashing/JAWABAN.md), [insecure-randomness/JAWABAN.md](insecure-randomness/JAWABAN.md), [sensitive-data-exposure/JAWABAN.md](sensitive-data-exposure/JAWABAN.md), [jwt-vulnerabilities/JAWABAN.md](jwt-vulnerabilities/JAWABAN.md)
 - [sql-injection/JAWABAN.md](sql-injection/JAWABAN.md), [xss/JAWABAN.md](xss/JAWABAN.md), [command-injection/JAWABAN.md](command-injection/JAWABAN.md), [lfi/JAWABAN.md](lfi/JAWABAN.md), [file-upload/JAWABAN.md](file-upload/JAWABAN.md)
+- [insecure-design/JAWABAN.md](insecure-design/JAWABAN.md)
 - [username-enumeration/JAWABAN.md](username-enumeration/JAWABAN.md), [brute-force-protection/JAWABAN.md](brute-force-protection/JAWABAN.md), [session-management/JAWABAN.md](session-management/JAWABAN.md), [password-reset/JAWABAN.md](password-reset/JAWABAN.md)
+- [data-integrity/JAWABAN.md](data-integrity/JAWABAN.md)
+- [logging-failures/JAWABAN.md](logging-failures/JAWABAN.md)
+- [exceptional-conditions/JAWABAN.md](exceptional-conditions/JAWABAN.md)
 
-## Saran alur pelatihan (4 hari, mengikuti 4 kategori yang sudah lengkap)
+## Saran alur pelatihan (10 hari, mengikuti 10 kategori OWASP Top 10:2025)
 
 **Hari 1 — A05: Injection**
 1. **Konsep dasar** (15 menit): buka Portal → klik kategori **A05: Injection**, bahas
@@ -205,8 +251,39 @@ sebelum sesi selesai):
 3. **Broken Brute-Force Protection** (~1 jam): Lab 1 → 3.
 4. **Broken Session Management** (~1.5 jam): Lab 1 → 4.
 5. **Password Reset Flaws** (~1.5 jam): Lab 1 → 4.
-6. **Diskusi mitigasi** (30 menit): bandingkan kode vulnerable vs perbaikannya di seluruh 4
-   hari — lihat bagian "Mitigasi" di tiap README folder.
+6. **Diskusi mitigasi** (30 menit): bandingkan kode vulnerable vs perbaikannya di seluruh
+   hari sejauh ini — lihat bagian "Mitigasi" di tiap README folder.
+
+**Hari 5 — A02: Security Misconfiguration**
+1. **Konsep dasar** (15 menit): kategori **A02: Security Misconfiguration**.
+2. **Security Misconfiguration** (~2.5 jam): Lab 1 → 6 (debug mode, kredensial default,
+   directory listing, debug endpoint tertinggal, CORS misconfiguration, clickjacking).
+
+**Hari 6 — A03: Software Supply Chain Failures**
+1. **Konsep dasar** (15 menit): kategori **A03: Software Supply Chain Failures**.
+2. **Software Supply Chain Failures** (~2.5 jam): Lab 1 → 5 (Prototype Pollution, dependency
+   confusion, secret CI/CD ter-expose, auto-update tanpa verifikasi, postinstall berbahaya).
+
+**Hari 7 — A06: Insecure Design**
+1. **Konsep dasar** (15 menit): kategori **A06: Insecure Design**.
+2. **Insecure Design / business logic** (~2.5 jam): Lab 1 → 5 (price tampering, negative
+   quantity, coupon stacking, skip step checkout, abuse referral).
+
+**Hari 8 — A08: Software or Data Integrity Failures**
+1. **Konsep dasar** (15 menit): kategori **A08: Software or Data Integrity Failures**.
+2. **Software or Data Integrity Failures** (~2 jam): Lab 1 → 4 (PHP Object Injection, state
+   cookie tanpa signature, timing attack pada signature check, update tanpa checksum).
+
+**Hari 9 — A09: Logging & Alerting Failures**
+1. **Konsep dasar** (15 menit): kategori **A09: Logging & Alerting Failures**.
+2. **Logging & Alerting Failures** (~2 jam): Lab 1 → 4 (log injection/forgery, log injection
+   → stored XSS, tidak ada alert brute-force, data sensitif di log).
+
+**Hari 10 — A10: Mishandling of Exceptional Conditions**
+1. **Konsep dasar** (15 menit): kategori **A10: Mishandling of Exceptional Conditions**.
+2. **Mishandling of Exceptional Conditions** (~2 jam): Lab 1 → 4 (fail-open gateway timeout,
+   error message bocor, race condition gift card, fail-open di blok catch).
+3. **Diskusi mitigasi & penutup** (30 menit): rangkum mitigasi seluruh 10 kategori.
 
 ## Tooling yang disarankan untuk peserta
 - Browser + DevTools
@@ -227,12 +304,15 @@ sebelum sesi selesai):
 - Tidak satu pun service lab (`portal`, `sqli-web`, `xss-web`, `cmdi-web`, `lfi-web`,
   `upload-web`, `idor-web`, `bfla-web`, `csrf-web`, `hashing-web`, `randomness-web`,
   `dataexposure-web`, `jwt-web`, `userenum-web`, `bruteforce-web`, `sessionmgmt-web`,
-  `pwreset-web`) mem-publish port ke host — semua akses publik lewat satu port `gateway`
-  (8079, nginx + Basic Auth) yang meneruskan request lewat jaringan Docker internal
-  berdasarkan path (`/sqli/`, `/xss/`, `/cmdi/`, `/lfi/`, `/upload/`, `/idor/`, `/bfla/`,
-  `/csrf/`, `/hashing/`, `/randomness/`, `/dataexposure/`, `/jwt/`, `/userenum/`,
-  `/bruteforce/`, `/sessionmgmt/`, `/pwreset/`). Karena hanya ada satu origin (satu port),
-  login Basic Auth cukup sekali dan otomatis berlaku untuk semua path/lab.
+  `pwreset-web`, `secmisconfig-web`, `supplychain-web`, `insecuredesign-web`,
+  `dataintegrity-web`, `loggingfail-web`, `exceptcond-web`) mem-publish port ke host — semua
+  akses publik lewat satu port `gateway` (8079, nginx + Basic Auth) yang meneruskan request
+  lewat jaringan Docker internal berdasarkan path (`/sqli/`, `/xss/`, `/cmdi/`, `/lfi/`,
+  `/upload/`, `/idor/`, `/bfla/`, `/csrf/`, `/hashing/`, `/randomness/`, `/dataexposure/`,
+  `/jwt/`, `/userenum/`, `/bruteforce/`, `/sessionmgmt/`, `/pwreset/`, `/secmisconfig/`,
+  `/supplychain/`, `/insecuredesign/`, `/dataintegrity/`, `/loggingfail/`, `/exceptcond/`).
+  Karena hanya ada satu origin (satu port), login Basic Auth cukup sekali dan otomatis
+  berlaku untuk semua path/lab.
 - `gateway/.htpasswd` **tidak boleh** memakai kredensial default/contoh saat online di server
   publik — lihat [DEPLOY.md](DEPLOY.md) langkah generate kredensial. File ini masuk
   `.gitignore` supaya tidak ikut ter-commit kalau repo di-push ke Git.

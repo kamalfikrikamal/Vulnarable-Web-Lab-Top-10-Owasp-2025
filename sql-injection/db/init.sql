@@ -47,3 +47,19 @@ CREATE TABLE profiles (
   username VARCHAR(255),
   bio VARCHAR(255)
 );
+
+-- Used by Lab 8 (stacked queries). Dedicated table so DROP/INSERT demo payloads never touch
+-- the shared users/products/profiles tables used by the other labs. The lab page itself also
+-- runs a CREATE TABLE IF NOT EXISTS on every load, so this is self-healing if dropped.
+CREATE TABLE IF NOT EXISTS notes (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  text VARCHAR(255)
+);
+
+-- Used by Lab 10 (SQLi via INSERT / registration form). Dedicated table, separate from the
+-- real `users` table, so this lab's demo registrations never collide with it.
+CREATE TABLE IF NOT EXISTS reg_demo_users (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50),
+  bio VARCHAR(255)
+);

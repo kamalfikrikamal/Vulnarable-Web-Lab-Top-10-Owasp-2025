@@ -17,6 +17,10 @@
   <a href="lab5_dom_xss.php">Lab 5: DOM-based</a>
   <a href="lab6_filter_bypass.php">Lab 6: Filter Bypass</a>
   <a href="lab7_useragent.php">Lab 7: User-Agent</a>
+  <a href="lab8_javascript_uri.php">Lab 8: javascript: URI</a>
+  <a href="lab9_svg_upload.php">Lab 9: SVG Upload</a>
+  <a href="lab10_postmessage_xss.php">Lab 10: postMessage</a>
+  <a href="lab11_csp_bypass.php">Lab 11: CSP Bypass</a>
 </nav>
 <div class="container">
 <h1><?php echo $title; ?></h1>
