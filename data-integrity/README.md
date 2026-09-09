@@ -10,6 +10,12 @@ artifact tanpa memverifikasi keasliannya terlebih dahulu — bagian dari
 | 2 | State cookie (saldo/keranjang) tanpa proteksi integritas sama sekali | `lab2_unsigned_state_cookie.php` |
 | 3 | Verifikasi signature HMAC pakai `==`, bukan `hash_equals()` | `lab3_timing_unsafe_hmac.php` |
 | 4 | Update sistem diterima tanpa verifikasi checksum/signature | `lab4_update_no_checksum.php` |
+| 5 | Magic hash / type juggling bypass | `lab5_magic_hash_bypass.php` |
+| 6 | Signing secret bocor di client-side JS | `lab6_leaked_signing_secret.php` |
+| 7 | Signature cuma menutupi sebagian data | `lab7_partial_signature_gap.php` |
+| 8 | Checksum dari sumber yang sama dengan artifact | `lab8_checksum_same_source.php` |
+| 9 | Variable injection lewat `extract()` | `lab9_extract_variable_injection.php` |
+| 10 | Dynamic dispatch dari input tak tepercaya | `lab10_untrusted_dynamic_dispatch.php` |
 
 ## Menjalankan
 
@@ -134,6 +140,41 @@ sebenarnya sudah tersedia di server (`data/official_update_checksum.txt`).
    diterapkan TIDAK cocok dengan checksum resmi yang ditampilkan di halaman yang sama, tapi
    server tetap menerimanya begitu saja.
 
+### Lab 5 — Magic hash / type juggling bypass
+Submit kode recovery `QNKCDZO` lewat form. `md5('QNKCDZO')` = `0e830400451993494058024219903391`
+— berbeda dari hash tersimpan (`0e462097431906509019562988736854`, hasil `md5('240610708')`),
+tapi keduanya berbentuk "0e" + digit sehingga `==` menafsirkan keduanya sebagai `0`. Verifikasi
+"berhasil" tanpa attacker pernah tahu kode aslinya.
+
+### Lab 6 — Signing secret bocor di client-side JS
+Buka `reset_preview.js` langsung dari lab — baca nilai `RESET_LINK_SECRET`. Hitung token untuk
+email siapa pun (mis. `admin@corp.test`):
+```bash
+php -r "echo hash_hmac('sha256', 'admin@corp.test', 'corp-reset-2024-preview-key');"
+```
+Tempel hasilnya ke form "Verifikasi Token" — token dinyatakan valid tanpa pernah menerima email
+reset yang sesungguhnya.
+
+### Lab 7 — Signature cuma menutupi sebagian data
+Form sudah pre-filled dengan instruksi transfer + signature yang valid. Ubah field `recipient`
+(dan/atau `currency`) TANPA mengubah `amount`/`signature`, lalu submit — signature tetap
+dinyatakan valid karena cuma menandatangani `amount`.
+
+### Lab 8 — Checksum dari sumber yang sama dengan artifact
+Isi textarea dengan konten bebas, hitung SHA-256-nya sendiri (`sha256sum`), tempel ke field
+checksum, submit — verifikasi "berhasil" karena checksum yang dibandingkan datang dari pengirim
+yang sama dengan artifact-nya, bukan dari kanal terpisah yang tepercaya.
+
+### Lab 9 — Variable injection lewat extract()
+Akses `?is_admin=1&account_balance=999999999&username=SUPERUSER` — ketiga variabel yang
+seharusnya cuma bisa diisi dari server (diinisialisasi aman di awal skrip) langsung tertimpa oleh
+parameter URL lewat `extract($_GET)`.
+
+### Lab 10 — Dynamic dispatch dari input tak tepercaya
+Menu resmi cuma `view_profile`/`view_orders`. Akses `?action=grant_admin_role` — fungsi internal
+yang tidak pernah ditautkan di menu manapun tetap terpanggil karena dispatcher cuma mengecek
+`function_exists()`, bukan allowlist action yang sah.
+
 ## Mitigasi (untuk didiskusikan setelah lab)
 - Jangan pernah memanggil `unserialize()` pada input yang bisa dikendalikan pengguna — pakai
   format data seperti JSON (`json_decode()`) yang tidak bisa membentuk objek/memicu magic
@@ -150,3 +191,22 @@ sebenarnya sudah tersedia di server (`data/official_update_checksum.txt`).
   memengaruhi keamanan) harus diverifikasi lewat **signature kriptografis** yang dicek terhadap
   public key milik penerbit tepercaya — checksum biasa (SHA-256, dsb.) saja tidak cukup, karena
   attacker yang mengganti isi file bisa dengan mudah menghitung ulang checksum-nya sendiri juga.
+- **Selalu pakai `===`/`hash_equals()` untuk membandingkan hash/token/secret**, jangan pernah
+  `==` — string berbentuk "0e" + digit ditafsirkan PHP sebagai notasi ilmiah pada perbandingan
+  longgar, membuat dua hash yang isinya sama sekali berbeda bisa dianggap "sama".
+- **Secret signing tidak boleh pernah dikirim ke client dalam bentuk apa pun** — termasuk lewat
+  file JavaScript publik untuk fitur "preview"/UX. Kalau logika signing perlu berjalan di client,
+  itu artinya secret-nya tidak lagi rahasia dan harus didesain ulang (mis. server yang
+  menandatangani, bukan client).
+- **Signature/checksum harus mencakup SELURUH data yang integritasnya ingin dijamin**, bukan
+  cuma sebagian field — pastikan proses canonicalization mengikutsertakan setiap field yang bisa
+  mengubah makna/dampak transaksi sebelum ditandatangani.
+- **Checksum/hash pembanding harus datang dari kanal yang independen dan tepercaya**, terpisah
+  dari artifact yang sedang diverifikasi — bukan dikirim bersamaan oleh pihak yang sama dalam
+  request yang sama.
+- **Jangan pernah `extract()` data dari request pengguna** ke scope yang berisi variabel
+  sensitif — kalau butuh kenyamanan semacam itu, pakai allowlist eksplisit nama key yang boleh
+  diproses, atau akses `$_GET`/`$_POST` langsung per field.
+- **Dispatcher berbasis nama (function/class dari input) wajib memakai allowlist eksplisit**
+  (`in_array($action, $ALLOWED, true)`), jangan pernah `function_exists()`/`class_exists()` saja
+  — keberadaan sebuah fungsi di kodebase tidak sama dengan izin untuk memanggilnya dari luar.

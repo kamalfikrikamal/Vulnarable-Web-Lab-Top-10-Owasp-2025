@@ -145,6 +145,94 @@ membandingkan keduanya.
 
 ---
 
+## Lab 5 — Magic hash / type juggling bypass (`lab5_magic_hash_bypass.php`)
+**Kode:** `$match = (md5($submitted) == $stored_hash);` — perbandingan pakai `==`, bukan
+`===`/`hash_equals()`. `$stored_hash` di-seed sebagai `'0e462097431906509019562988736854'`
+(`md5('240610708')`).
+**Payload:** kirim `recovery_code=QNKCDZO`.
+**Kenapa berhasil:** `md5('QNKCDZO')` = `'0e830400451993494058024219903391'`. Kedua string
+("0e" diikuti hanya digit) ditafsirkan PHP sebagai notasi ilmiah saat dibandingkan dengan `==`
+— `0e830400... == 0e462097...` sama-sama dievaluasi sebagai `0 == 0`, `true`, walau isi string
+aslinya sama sekali berbeda. Diverifikasi langsung lewat `php -r 'var_dump("0e830400451993494058024219903391" == "0e462097431906509019562988736854");'` → `bool(true)`.
+**Hasil:** "COCOK — akses recovery diberikan!" muncul tanpa attacker pernah tahu kode recovery
+asli (`240610708`) sama sekali.
+
+---
+
+## Lab 6 — Signing secret bocor di client-side JS (`lab6_leaked_signing_secret.php`)
+**Kode:** `define('RESET_LINK_SECRET', 'corp-reset-2024-preview-key');` — nilai yang PERSIS SAMA
+juga ada di `reset_preview.js` (file statis publik, dimuat lab tanpa autentikasi apa pun).
+**Payload:**
+```bash
+php -r "echo hash_hmac('sha256', 'admin@corp.test', 'corp-reset-2024-preview-key');"
+# 5ca711a3682e179ce62506029d9def1f68d9fc180d16a04538722f8db66ea15b
+```
+Tempel hasilnya ke form "Verifikasi Token" dengan email `admin@corp.test`.
+**Kenapa berhasil:** mekanisme HMAC-nya sendiri benar (dibandingkan dengan `hash_equals()`,
+tidak ada celah timing) — tapi secret yang dipakai menandatangani bukan rahasia, siapa pun yang
+membuka `reset_preview.js` bisa membacanya langsung.
+**Hasil:** token dinyatakan "VALID" untuk email admin tanpa pernah melalui alur "Lupa Password"
+yang sah sama sekali.
+
+---
+
+## Lab 7 — Signature cuma menutupi sebagian data (`lab7_partial_signature_gap.php`)
+**Kode:** `$signature = hash_hmac('sha256', (string)$amount, TRANSFER_SECRET);` — cuma
+`$amount` yang ditandatangani, `$currency`/`$recipient` tidak pernah ikut tercakup.
+**Payload:** form pre-filled dengan `amount=500000`, `recipient=1111111111` (rekening sendiri),
+dan signature yang valid untuk `amount=500000`. Ubah `recipient` jadi rekening lain (apa saja),
+JANGAN ubah `amount`/`signature`, submit.
+**Kenapa berhasil:** verifikasi signature (`hash_equals($expected, $signature)`) tetap `true`
+karena `$expected` dihitung ulang dari `$amount` yang tidak berubah — server tidak tahu (dan
+tidak bisa tahu) bahwa `recipient` sudah diubah, karena field itu memang tidak pernah jadi
+bagian dari apa yang ditandatangani.
+**Hasil:** "Signature valid: YA" dengan peringatan eksplisit bahwa recipient/currency sudah
+berubah dari instruksi transfer aslinya, tapi tetap dieksekusi sebagai transfer yang sah.
+
+---
+
+## Lab 8 — Checksum dari sumber yang sama dengan artifact (`lab8_checksum_same_source.php`)
+**Kode:** `$valid = hash_equals(hash('sha256', $content), $submitted_checksum);` — keduanya
+(`$content` dan `$submitted_checksum`) datang dari field form yang sama, diisi pengirim yang
+sama, dalam request yang sama.
+**Payload:** isi textarea dengan konten bebas, hitung `sha256sum`-nya sendiri, tempel ke field
+checksum.
+**Kenapa berhasil:** perbandingan hash-nya sendiri 100% benar secara matematis — bug-nya murni
+di desain: tidak ada apa pun yang memaksa checksum pembanding datang dari sumber yang BENAR-BENAR
+independen (manifest resmi vendor, hash yang sudah di-pin sebelumnya). Attacker cuma perlu
+menghitung checksum untuk konten mereka SENDIRI, bukan memecahkan/memalsukan apa pun.
+**Hasil:** "VALID — package DITERAPKAN sebagai update resmi" untuk konten apa pun yang dikirim,
+tercatat di log riwayat package yang "berhasil" diterapkan.
+
+---
+
+## Lab 9 — Variable injection lewat extract() (`lab9_extract_variable_injection.php`)
+**Kode:** `$is_admin = false; $account_balance = 0; $username = 'guest'; extract($_GET);` — tiga
+variabel yang diinisialisasi aman langsung tertimpa oleh key apa pun di `$_GET` yang namanya
+cocok.
+**Payload:** `?is_admin=1&account_balance=999999999&username=SUPERUSER`
+**Kenapa berhasil:** `extract()` tanpa flag pembatas menulis SETIAP pasangan key-value di array
+sumber jadi variabel di scope pemanggil, tanpa allowlist nama variabel mana yang aman ditimpa —
+persis mekanisme `register_globals` yang dihapus dari PHP karena masalah keamanan yang sama.
+**Hasil:** halaman menampilkan role `ADMIN` dan saldo `Rp 999.999.999`, keduanya murni berasal
+dari parameter URL, bukan sesi login atau database.
+
+---
+
+## Lab 10 — Dynamic dispatch dari input tak tepercaya (`lab10_untrusted_dynamic_dispatch.php`)
+**Kode:** `if (function_exists($action)) { $output = $action(); }` — tidak ada pengecekan
+terhadap `$MENU_ACTIONS` (allowlist resmi), cuma memastikan sebuah fungsi bernama itu ADA.
+**Payload:** `?action=grant_admin_role` (fungsi internal, tidak pernah ditautkan di menu/UI
+manapun).
+**Kenapa berhasil:** `function_exists()` menjawab "apakah fungsi ini ada di kodebase", bukan
+"apakah fungsi ini boleh dipanggil dari luar". Fungsi internal yang cuma dimaksudkan dipanggil
+oleh kode lain di sistem (bukan langsung dari HTTP request) tetap reachable selama namanya bisa
+ditebak.
+**Hasil:** role `alice` di `data/db.json` benar-benar berubah jadi `admin`, dan log dispatch
+mencatat pemanggilan `grant_admin_role` dengan tanda "TIDAK ada di menu resmi".
+
+---
+
 ## Ringkasan hasil akhir
 
 | Lab | Teknik | Bukti keberhasilan |
@@ -153,6 +241,12 @@ membandingkan keduanya.
 | 2 | State klien tanpa signature/HMAC | Saldo & role di cookie diubah bebas dan diterima server |
 | 3 | Perbandingan signature pakai `==`, kunci HMAC lemah | Voucher `discount=100` diterima valid tanpa tahu `SECRET_KEY` lewat channel resmi |
 | 4 | Upload "update" tanpa cek checksum/signature | File dengan hash tidak cocok tetap "diterapkan" sebagai update resmi |
+| 5 | Magic hash / type juggling pada perbandingan `==` | Recovery code palsu diterima tanpa tahu kode asli |
+| 6 | Signing secret bocor di file JS publik | Token reset valid dihitung untuk email admin |
+| 7 | Signature tidak mencakup seluruh field | Recipient transfer diubah, signature tetap valid |
+| 8 | Checksum dari sumber tidak independen | Package apa pun "lolos" verifikasi checksum |
+| 9 | `extract()` menimpa variabel internal | Role admin & saldo palsu murni dari parameter URL |
+| 10 | Dispatch berbasis `function_exists()` tanpa allowlist | Fungsi internal `grant_admin_role` terpanggil dari luar |
 
 ## Mitigasi (ringkas, lihat [README.md](README.md) untuk versi lengkap)
 - Jangan `unserialize()` data yang dikendalikan pengguna — pakai JSON, atau batasi dengan
@@ -162,3 +256,9 @@ membandingkan keduanya.
 - Signing key harus panjang dan acak (CSPRNG), bukan string pendek yang bisa ditebak.
 - Update/artifact harus diverifikasi dengan signature kriptografis terhadap public key
   tepercaya sebelum diterapkan — checksum biasa saja tidak cukup melawan attacker aktif.
+- Pakai `===`/`hash_equals()` untuk membandingkan hash/token, jangan pernah `==`.
+- Secret signing tidak boleh pernah dikirim ke client dalam bentuk apa pun.
+- Signature/checksum harus mencakup seluruh data yang integritasnya ingin dijamin.
+- Checksum pembanding harus datang dari kanal independen yang tepercaya.
+- Jangan `extract()` data request ke scope yang berisi variabel sensitif.
+- Dispatcher berbasis nama wajib pakai allowlist eksplisit, bukan `function_exists()` saja.

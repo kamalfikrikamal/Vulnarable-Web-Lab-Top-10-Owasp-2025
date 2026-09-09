@@ -24,7 +24,10 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 - **A07:2025 — Authentication Failures**: Username Enumeration, Broken Brute-Force
   Protection, Broken Session Management, Password Reset Flaws.
 - **A08:2025 — Software or Data Integrity Failures**: PHP Object Injection, state cookie
-  tanpa signature, signature check rentan timing attack, update tanpa checksum.
+  tanpa signature, signature check rentan timing attack, update tanpa checksum, magic hash/type
+  juggling bypass, signing secret bocor di client-side JS, signature yang cuma menutupi
+  sebagian data, checksum dari sumber tidak independen, variable injection lewat `extract()`,
+  dynamic dispatch dari input tak tepercaya.
 - **A09:2025 — Logging & Alerting Failures**: log injection/forgery, log injection → stored
   XSS di dashboard admin, tidak ada alert brute-force, data sensitif tercatat di log.
 - **A10:2025 — Mishandling of Exceptional Conditions**: fail-open saat gateway timeout, error
@@ -66,7 +69,7 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 ├── brute-force-protection/     # PHP - 3 lab Broken Brute-Force Protection (A07)
 ├── session-management/         # PHP - 4 lab Broken Session Management (A07)
 ├── password-reset/             # PHP - 4 lab Password Reset Flaws (A07)
-├── data-integrity/               # PHP - 4 lab Software or Data Integrity Failures (A08)
+├── data-integrity/               # PHP - 10 lab Software or Data Integrity Failures (A08)
 ├── logging-failures/             # PHP - 4 lab Logging & Alerting Failures (A09)
 └── exceptional-conditions/       # PHP - 4 lab Mishandling of Exceptional Conditions (A10)
 ```
@@ -203,7 +206,7 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [password-reset/README.md](password-reset/README.md) — 4 lab Password Reset Flaws
 
 **A08: Software or Data Integrity Failures**
-- [data-integrity/README.md](data-integrity/README.md) — 4 lab Software or Data Integrity Failures
+- [data-integrity/README.md](data-integrity/README.md) — 10 lab Software or Data Integrity Failures
 
 **A09: Logging & Alerting Failures**
 - [logging-failures/README.md](logging-failures/README.md) — 4 lab Logging & Alerting Failures
@@ -287,8 +290,12 @@ sebelum sesi selesai):
 
 **Hari 8 — A08: Software or Data Integrity Failures**
 1. **Konsep dasar** (15 menit): kategori **A08: Software or Data Integrity Failures**.
-2. **Software or Data Integrity Failures** (~2 jam): Lab 1 → 4 (PHP Object Injection, state
+2. **Data & Software Integrity Failures** (~1.5 jam): Lab 1 → 4 (PHP Object Injection, state
    cookie tanpa signature, timing attack pada signature check, update tanpa checksum).
+3. **Broken Integrity Verification Mechanisms** (~1.5 jam): Lab 5 → 8 (magic hash, leaked
+   signing secret, partial signature gap, checksum same source).
+4. **Untrusted Input Shaping Program State** (~45 menit): Lab 9 → 10 (extract() injection,
+   untrusted dynamic dispatch).
 
 **Hari 9 — A09: Logging & Alerting Failures**
 1. **Konsep dasar** (15 menit): kategori **A09: Logging & Alerting Failures**.

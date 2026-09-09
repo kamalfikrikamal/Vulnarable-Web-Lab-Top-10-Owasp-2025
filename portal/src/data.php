@@ -956,7 +956,7 @@ function owasp_categories() {
         'a08-software-data-integrity-failures' => [
             'code' => 'A08:2025', 'title' => 'Software or Data Integrity Failures', 'status' => 'active',
             'summary' => 'Aplikasi mempercayai kode/data dari sumber yang tidak terverifikasi.',
-            'description' => '<p>Terjadi ketika aplikasi menerima update, plugin, atau data terserialisasi dari sumber luar tanpa memverifikasi keasliannya (mis. lewat digital signature), sehingga rentan dimanipulasi.</p><p><strong>Contoh sederhana:</strong> Aplikasi men-deserialisasi objek PHP/Java dari cookie pengguna secara langsung. Objek yang dimanipulasi bisa memicu eksekusi kode saat proses deserialisasi (insecure deserialization).</p><p>Lab hari ini mencakup empat variasi Software or Data Integrity Failures: <strong>PHP Object Injection</strong> lewat cookie, <strong>state cookie tanpa signature</strong> sama sekali, <strong>signature check yang rentan timing attack</strong> (pakai <code>==</code> bukan <code>hash_equals()</code>), dan <strong>update artifact tanpa verifikasi checksum</strong>.</p>',
+            'description' => '<p>Terjadi ketika aplikasi menerima update, plugin, atau data terserialisasi dari sumber luar tanpa memverifikasi keasliannya (mis. lewat digital signature), sehingga rentan dimanipulasi.</p><p><strong>Contoh sederhana:</strong> Aplikasi men-deserialisasi objek PHP/Java dari cookie pengguna secara langsung. Objek yang dimanipulasi bisa memicu eksekusi kode saat proses deserialisasi (insecure deserialization).</p><p>Lab hari ini mencakup tiga variasi Software or Data Integrity Failures: <strong>Data & Software Integrity Failures</strong> umum (PHP Object Injection, state cookie tanpa signature, timing attack pada signature, update tanpa checksum), <strong>Broken Integrity Verification Mechanisms</strong> (magic hash/type juggling, secret signing bocor, signature yang cuma menutupi sebagian data, checksum dari sumber tidak independen), dan <strong>Untrusted Input Shaping Program State</strong> (variable injection lewat <code>extract()</code>, dynamic dispatch dari input tak tepercaya).</p>',
             'vulns' => [
                 'integrity' => [
                     'title' => 'Data & Software Integrity Failures',
@@ -986,6 +986,56 @@ function owasp_categories() {
                             'summary' => 'File update yang diupload diterapkan tanpa verifikasi apa pun.',
                             'description' => '<p>Fitur "apply update" admin menerima file apa saja dan langsung menerapkannya - tidak ada perbandingan checksum/signature terhadap artifact resmi.</p>',
                             'app' => 'dataintegrity', 'path' => 'lab4_update_no_checksum.php',
+                        ],
+                    ],
+                ],
+                'broken-integrity-verification' => [
+                    'title' => 'Broken Integrity Verification Mechanisms',
+                    'summary' => 'Mekanisme verifikasi integritas ADA, tapi masing-masing rusak dengan cara berbeda.',
+                    'description' => '<p>Beda dari kategori dasar di atas (yang sama sekali tidak punya mekanisme verifikasi), lab-lab ini menunjukkan bahwa PUNYA signature/checksum/hash comparison saja tidak cukup - kelemahan tipe data, secret yang bocor, cakupan signature yang tidak lengkap, dan sumber pembanding yang tidak independen semuanya bisa membuat mekanisme yang "terlihat benar" tetap gagal melindungi apa pun.</p>',
+                    'labs' => [
+                        'magic-hash-bypass' => [
+                            'title' => 'Magic Hash / Type Juggling Bypass',
+                            'summary' => 'Perbandingan hash pakai == menafsirkan string "0e"+digit sebagai notasi ilmiah.',
+                            'description' => '<p>Dua hash MD5 yang isinya sama sekali berbeda tapi sama-sama berbentuk "0e" diikuti hanya digit dianggap "sama" oleh operator <code>==</code>, karena keduanya dikonversi jadi angka 0 dulu sebelum dibandingkan.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab5_magic_hash_bypass.php',
+                        ],
+                        'leaked-signing-secret' => [
+                            'title' => 'Signing Secret Bocor di Client-Side JS',
+                            'summary' => 'Secret HMAC untuk link reset password juga ada di file JavaScript publik.',
+                            'description' => '<p>Mekanisme HMAC-nya sendiri benar, tapi secret yang dipakai menandatangani bukan rahasia sama sekali - ada di file JS yang dimuat publik untuk fitur "live preview".</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab6_leaked_signing_secret.php',
+                        ],
+                        'partial-signature-gap' => [
+                            'title' => 'Signature Cuma Menutupi Sebagian Data',
+                            'summary' => 'Signature transfer dana cuma mencakup field amount, bukan recipient/currency.',
+                            'description' => '<p>Field yang tidak ikut ditandatangani bisa diubah bebas tanpa membuat signature-nya tidak valid - canonicalization yang tidak lengkap membuat proteksi integritasnya cuma parsial.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab7_partial_signature_gap.php',
+                        ],
+                        'checksum-same-source' => [
+                            'title' => 'Checksum dari Sumber yang Sama dengan Artifact',
+                            'summary' => 'Checksum "resmi" pembanding datang dari form/party yang sama dengan artifact-nya.',
+                            'description' => '<p>Perbandingan checksum-nya benar secara matematis, tapi tidak membuktikan apa pun karena checksum pembanding bukan dari kanal independen yang tepercaya.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab8_checksum_same_source.php',
+                        ],
+                    ],
+                ],
+                'untrusted-input-shaping-state' => [
+                    'title' => 'Untrusted Input Shaping Program State',
+                    'summary' => 'Input eksternal dipercaya untuk membentuk state/kode internal program itu sendiri.',
+                    'description' => '<p>Bukan cuma data biasa yang dipercaya begitu saja dari input pengguna - nama variabel internal, bahkan kode apa yang dijalankan, ikut ditentukan oleh apa yang dikirim client.</p>',
+                    'labs' => [
+                        'extract-variable-injection' => [
+                            'title' => 'Variable Injection Lewat extract()',
+                            'summary' => 'extract($_GET) menimpa variabel internal yang seharusnya cuma dari server.',
+                            'description' => '<p>Variabel seperti <code>$is_admin</code> yang diinisialisasi aman di awal skrip langsung tertimpa oleh parameter URL dengan nama yang sama - mengulang masalah <code>register_globals</code> secara manual.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab9_extract_variable_injection.php',
+                        ],
+                        'untrusted-dynamic-dispatch' => [
+                            'title' => 'Dynamic Dispatch dari Input Tak Tepercaya',
+                            'summary' => 'Dispatcher memanggil fungsi apa pun yang namanya cocok dengan input, bukan allowlist.',
+                            'description' => '<p><code>function_exists($action)</code> dipakai untuk memutuskan boleh-tidaknya suatu action dijalankan - fungsi internal yang tidak pernah ditautkan ke UI manapun tetap reachable selama namanya bisa ditebak.</p>',
+                            'app' => 'dataintegrity', 'path' => 'lab10_untrusted_dynamic_dispatch.php',
                         ],
                     ],
                 ],
