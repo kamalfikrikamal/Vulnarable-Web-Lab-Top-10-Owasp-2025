@@ -737,7 +737,7 @@ function owasp_categories() {
         'a06-insecure-design' => [
             'code' => 'A06:2025', 'title' => 'Insecure Design', 'status' => 'active',
             'summary' => 'Kelemahan berasal dari desain/arsitektur, bukan sekadar bug.',
-            'description' => '<p>Berbeda dari kesalahan implementasi, Insecure Design adalah kelemahan yang sudah tertanam sejak tahap perancangan alur/fitur aplikasi - sehingga tidak bisa diperbaiki hanya dengan menambal kode, melainkan perlu didesain ulang.</p><p><strong>Contoh sederhana:</strong> Fitur "lupa password" mengirim kode OTP 4 digit tanpa batas percobaan (rate limiting), sehingga penyerang bisa mencoba 10.000 kombinasi dengan cepat sampai berhasil.</p><p>Lab hari ini mencakup lima variasi <em>business logic vulnerabilities</em>: <strong>price tampering</strong>, <strong>negative quantity</strong>, <strong>coupon stacking</strong>, <strong>skip step alur checkout</strong>, dan <strong>abuse bonus referral tanpa batas</strong> - semuanya kode "berjalan sesuai spek", tapi speknya sendiri yang cacat.</p>',
+            'description' => '<p>Berbeda dari kesalahan implementasi, Insecure Design adalah kelemahan yang sudah tertanam sejak tahap perancangan alur/fitur aplikasi - sehingga tidak bisa diperbaiki hanya dengan menambal kode, melainkan perlu didesain ulang.</p><p><strong>Contoh sederhana:</strong> Fitur "lupa password" mengirim kode OTP 4 digit tanpa batas percobaan (rate limiting), sehingga penyerang bisa mencoba 10.000 kombinasi dengan cepat sampai berhasil.</p><p>Lab hari ini mencakup tiga variasi <em>business logic vulnerabilities</em>: <strong>Business Logic Vulnerabilities</strong> umum (price tampering, negative quantity, coupon stacking, skip step checkout, referral abuse), <strong>Flawed Multi-Step Authentication Logic</strong> (2FA yang bisa dilewati lewat forced browsing, ganti password tanpa re-autentikasi, trusted device yang gampang dipalsukan), dan <strong>Business Rule Enforcement Gaps</strong> (HTTP Parameter Pollution pada kupon, price spoofing lewat header region, over-refund) - semuanya kode "berjalan sesuai spek", tapi speknya sendiri yang cacat.</p>',
             'vulns' => [
                 'business-logic' => [
                     'title' => 'Business Logic Vulnerabilities',
@@ -773,6 +773,56 @@ function owasp_categories() {
                             'summary' => 'Bonus referral bisa di-farming tanpa batas lewat akun baru berulang.',
                             'description' => '<p>Satu-satunya validasi adalah keunikan string username - tidak ada verifikasi email, limit per-IP, atau deteksi fraud, sehingga bonus bisa diklaim berkali-kali lewat akun baru yang trivial dibuat.</p>',
                             'app' => 'insecuredesign', 'path' => 'lab5_unlimited_referral_abuse.php',
+                        ],
+                    ],
+                ],
+                'flawed-auth-workflow' => [
+                    'title' => 'Flawed Multi-Step Authentication Logic',
+                    'summary' => 'Alur login bertahap (password -> 2FA) yang penegakannya di server punya celah.',
+                    'description' => '<p>Login bertahap (password lalu 2FA) melibatkan beberapa komponen yang masing-masing terlihat benar sendiri-sendiri - flag session, token "trusted device", form ganti password - tapi urutan/penegakannya di server tidak konsisten, membuka celah untuk melewati faktor kedua sepenuhnya.</p>',
+                    'labs' => [
+                        '2fa-forced-browsing' => [
+                            'title' => '2FA bypass lewat forced browsing',
+                            'summary' => 'Halaman dashboard cuma mengecek flag password, bukan flag OTP.',
+                            'description' => '<p>Server menyimpan flag "password benar" dan "OTP terverifikasi" terpisah, tapi dashboard cuma mengecek flag pertama - mengetik langsung URL step berikutnya melewati verifikasi OTP sama sekali.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab6_2fa_forced_browsing.php',
+                        ],
+                        'password-change-no-reauth' => [
+                            'title' => 'Ganti password tanpa re-autentikasi',
+                            'summary' => 'Form ganti password tidak pernah meminta password lama.',
+                            'description' => '<p>Aksi sensitif ini tidak menuntut step-up authentication apa pun - sesi yang dicuri/dipinjam sebentar cukup untuk mengunci pemilik akun asli secara permanen.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab7_password_change_no_reauth.php',
+                        ],
+                        'trusted-device-bypass' => [
+                            'title' => 'Trusted device bypass 2FA',
+                            'summary' => 'Cookie "perangkat terpercaya" isinya cuma username polos.',
+                            'description' => '<p>Token "trusted device" seharusnya acak & diikat ke device tertentu setelah OTP diverifikasi - di sini cuma username polos, gampang ditebak/disalin ke device manapun untuk melewati OTP sepenuhnya.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab8_trusted_device_bypass.php',
+                        ],
+                    ],
+                ],
+                'business-rule-enforcement-gaps' => [
+                    'title' => 'Business Rule Enforcement Gaps',
+                    'summary' => 'Aturan bisnis yang seharusnya jelas ternyata tidak pernah benar-benar ditegakkan.',
+                    'description' => '<p>"Satu kupon sekali pakai per request", "harga sesuai region asli", "refund tidak boleh melebihi pembelian" - aturan-aturan ini terdengar jelas, tapi tidak satu pun ditegakkan lewat validasi nyata di server.</p>',
+                    'labs' => [
+                        'coupon-parameter-pollution' => [
+                            'title' => 'HTTP Parameter Pollution pada kupon',
+                            'summary' => 'Kode kupon yang sama di banyak slot array diterapkan berkali-kali.',
+                            'description' => '<p>Field kupon yang sah mendukung banyak kode berbeda sekaligus (array) tidak pernah men-deduplikasi kode yang SAMA muncul lebih dari sekali - diskon diterapkan berkali-kali dalam satu request.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab9_coupon_parameter_pollution.php',
+                        ],
+                        'region-price-spoofing' => [
+                            'title' => 'Price spoofing lewat header region',
+                            'summary' => 'Harga produk digital ditentukan dari header X-Region milik client.',
+                            'description' => '<p>Region untuk penentuan harga diambil dari header yang sepenuhnya dikendalikan client, bukan dari sumber tepercaya seperti IP atau alamat billing terverifikasi.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab10_region_price_spoofing.php',
+                        ],
+                        'over-refund' => [
+                            'title' => 'Over-refund lewat kuantitas return',
+                            'summary' => 'Kuantitas return tidak dibandingkan dengan kuantitas yang benar-benar dibeli.',
+                            'description' => '<p>Refund dihitung murni dari angka yang diminta client, tanpa validasi terhadap riwayat pembelian asli - bisa jauh melampaui total yang pernah dibeli.</p>',
+                            'app' => 'insecuredesign', 'path' => 'lab11_over_refund.php',
                         ],
                     ],
                 ],

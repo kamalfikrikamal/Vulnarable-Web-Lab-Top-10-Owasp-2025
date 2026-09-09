@@ -18,7 +18,9 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 - **A05:2025 — Injection**: SQL Injection (11 lab), XSS (11 lab), OS Command Injection, LFI,
   File Upload Vulnerabilities.
 - **A06:2025 — Insecure Design**: price tampering, negative quantity, coupon stacking, skip
-  step checkout, abuse bonus referral tanpa batas.
+  step checkout, abuse bonus referral tanpa batas, 2FA bypass lewat forced browsing, ganti
+  password tanpa re-autentikasi, trusted device bypass, HTTP Parameter Pollution pada kupon,
+  price spoofing lewat header region, over-refund.
 - **A07:2025 — Authentication Failures**: Username Enumeration, Broken Brute-Force
   Protection, Broken Session Management, Password Reset Flaws.
 - **A08:2025 — Software or Data Integrity Failures**: PHP Object Injection, state cookie
@@ -59,7 +61,7 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 ├── command-injection/     # PHP - 4 lab OS Command Injection (A05)
 ├── lfi/                   # PHP - 7 lab Local File Inclusion (LFI) / Path Traversal (A05)
 ├── file-upload/           # PHP - 7 lab File Upload Vulnerabilities (A05)
-├── insecure-design/             # PHP - 5 lab Insecure Design / business logic (A06)
+├── insecure-design/             # PHP - 11 lab Insecure Design / business logic (A06)
 ├── username-enumeration/       # PHP - 4 lab Username Enumeration (A07)
 ├── brute-force-protection/     # PHP - 3 lab Broken Brute-Force Protection (A07)
 ├── session-management/         # PHP - 4 lab Broken Session Management (A07)
@@ -192,7 +194,7 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [file-upload/README.md](file-upload/README.md) — 7 lab File Upload Vulnerabilities
 
 **A06: Insecure Design**
-- [insecure-design/README.md](insecure-design/README.md) — 5 lab Insecure Design / business logic
+- [insecure-design/README.md](insecure-design/README.md) — 11 lab Insecure Design / business logic
 
 **A07: Authentication Failures**
 - [username-enumeration/README.md](username-enumeration/README.md) — 4 lab Username Enumeration
@@ -276,8 +278,12 @@ sebelum sesi selesai):
 
 **Hari 7 — A06: Insecure Design**
 1. **Konsep dasar** (15 menit): kategori **A06: Insecure Design**.
-2. **Insecure Design / business logic** (~2.5 jam): Lab 1 → 5 (price tampering, negative
+2. **Business Logic Vulnerabilities** (~1.5 jam): Lab 1 → 5 (price tampering, negative
    quantity, coupon stacking, skip step checkout, abuse referral).
+3. **Flawed Multi-Step Authentication Logic** (~1 jam): Lab 6 → 8 (2FA forced browsing, ganti
+   password tanpa re-auth, trusted device bypass).
+4. **Business Rule Enforcement Gaps** (~1 jam): Lab 9 → 11 (HPP kupon, price spoofing region,
+   over-refund).
 
 **Hari 8 — A08: Software or Data Integrity Failures**
 1. **Konsep dasar** (15 menit): kategori **A08: Software or Data Integrity Failures**.

@@ -22,6 +22,23 @@ function seed_db() {
             'wallet_balance' => 0,
             'signups' => [],
         ],
+        // Lab 6/8: akun demo untuk alur login bertahap (password lalu OTP).
+        'auth_account' => [
+            'username' => 'alice',
+            'password' => 'Password123',
+            'otp' => '482913',
+        ],
+        // Lab 7: log perubahan password (tanpa pernah minta password lama).
+        'password_change_log' => [],
+        // Lab 9: kupon untuk demo HTTP Parameter Pollution (beda dari DISKON20 di Lab 3).
+        'coupon_hpp' => ['code' => 'HEMAT10', 'percent' => 10],
+        // Lab 10: harga produk digital yang seharusnya berbeda per region (server
+        // seharusnya menentukan region dari sumber tepercaya, bukan header/cookie klien).
+        'digital_product' => ['name' => 'Langganan Premium (1 tahun)', 'price_by_region' => ['ID' => 1500000, 'US' => 99]],
+        // Lab 11: order yang sudah "dibeli" untuk didemokan pengajuan return-nya.
+        'refund_orders' => [
+            ['id' => 9001, 'product' => 'Sepatu Sneakers', 'price' => 450000, 'quantity' => 1, 'total_refunded_qty' => 0],
+        ],
     ];
 }
 
