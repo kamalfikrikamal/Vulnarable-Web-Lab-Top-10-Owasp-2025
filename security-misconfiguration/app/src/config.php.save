@@ -1,0 +1,11 @@
+<?php
+// Konfigurasi database production - JANGAN commit ke git!
+// (File ini adalah "recovery file" yang ditinggalkan text editor, mis. gedit/nano
+// crash-recovery, saat developer mengedit config.php langsung di server production.)
+
+$db_host = 'db-prod.internal';
+$db_name = 'shop_prod';
+$db_user = 'shop_app';
+$db_pass = 'Backup_File_Le4k_2024!';
+
+$admin_recovery_email = 'ops@corp.test';

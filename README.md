@@ -7,9 +7,12 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 - **A01:2025 — Broken Access Control**: IDOR, Broken Function-Level Access Control, CSRF.
 - **A02:2025 — Security Misconfiguration**: debug mode aktif, kredensial default, directory
   listing, debug endpoint tertinggal, CORS misconfiguration, header keamanan hilang
-  (clickjacking).
+  (clickjacking), exposed VCS/config files (`.git`, `.env`, backup editor), cookie tanpa
+  HttpOnly/Secure/SameSite, HTTP method TRACE/PUT yang seharusnya dimatikan.
 - **A03:2025 — Software Supply Chain Failures**: Prototype Pollution, dependency confusion,
-  secret CI/CD ter-expose, auto-update tanpa verifikasi, postinstall script berbahaya.
+  secret CI/CD ter-expose, auto-update tanpa verifikasi, postinstall script berbahaya,
+  typosquatting, missing Subresource Integrity (SRI), lockfile diabaikan, CI Action & base image
+  container yang dipin ke tag mutable alih-alih SHA/digest immutable.
 - **A04:2025 — Cryptographic Failures**: Weak Password Hashing, Insecure Randomness,
   Sensitive Data Exposure, JWT Vulnerabilities.
 - **A05:2025 — Injection**: SQL Injection (11 lab), XSS (11 lab), OS Command Injection, LFI,
@@ -45,8 +48,8 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 ├── idor/                       # PHP - 5 lab Insecure Direct Object Reference (A01)
 ├── broken-function-access/     # PHP - 5 lab Broken Function-Level Access Control (A01)
 ├── csrf/                       # PHP - 4 lab Cross-Site Request Forgery (A01)
-├── security-misconfiguration/   # PHP - 6 lab Security Misconfiguration (A02)
-├── software-supply-chain/       # PHP - 5 lab Software Supply Chain Failures (A03)
+├── security-misconfiguration/   # PHP - 14 lab Security Misconfiguration (A02)
+├── software-supply-chain/       # PHP - 10 lab Software Supply Chain Failures (A03)
 ├── weak-hashing/                # PHP - 3 lab Weak Password Hashing (A04)
 ├── insecure-randomness/         # PHP - 4 lab Insecure Randomness (A04)
 ├── sensitive-data-exposure/     # PHP - 3 lab Sensitive Data Exposure (A04)
@@ -170,10 +173,10 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [csrf/README.md](csrf/README.md) — 4 lab Cross-Site Request Forgery (CSRF)
 
 **A02: Security Misconfiguration**
-- [security-misconfiguration/README.md](security-misconfiguration/README.md) — 6 lab Security Misconfiguration
+- [security-misconfiguration/README.md](security-misconfiguration/README.md) — 14 lab Security Misconfiguration
 
 **A03: Software Supply Chain Failures**
-- [software-supply-chain/README.md](software-supply-chain/README.md) — 5 lab Software Supply Chain Failures
+- [software-supply-chain/README.md](software-supply-chain/README.md) — 10 lab Software Supply Chain Failures
 
 **A04: Cryptographic Failures**
 - [weak-hashing/README.md](weak-hashing/README.md) — 3 lab Weak Password Hashing
@@ -256,13 +259,20 @@ sebelum sesi selesai):
 
 **Hari 5 — A02: Security Misconfiguration**
 1. **Konsep dasar** (15 menit): kategori **A02: Security Misconfiguration**.
-2. **Security Misconfiguration** (~2.5 jam): Lab 1 → 6 (debug mode, kredensial default,
+2. **Security Misconfiguration** (~1.5 jam): Lab 1 → 6 (debug mode, kredensial default,
    directory listing, debug endpoint tertinggal, CORS misconfiguration, clickjacking).
+3. **Exposed VCS/Config Files** (~1 jam): Lab 7 → 9 (`.git`, `.env`, backup file editor).
+4. **Cookie Security Misconfiguration** (~45 menit): Lab 10 → 12 (HttpOnly, Secure, SameSite).
+5. **Insecure HTTP Methods** (~45 menit): Lab 13 → 14 (TRACE/XST, PUT-to-RCE).
 
 **Hari 6 — A03: Software Supply Chain Failures**
 1. **Konsep dasar** (15 menit): kategori **A03: Software Supply Chain Failures**.
-2. **Software Supply Chain Failures** (~2.5 jam): Lab 1 → 5 (Prototype Pollution, dependency
+2. **Software Supply Chain Failures** (~1.5 jam): Lab 1 → 5 (Prototype Pollution, dependency
    confusion, secret CI/CD ter-expose, auto-update tanpa verifikasi, postinstall berbahaya).
+3. **Malicious/Compromised Package Content** (~1 jam): Lab 6 → 8 (typosquatting, missing SRI,
+   lockfile diabaikan).
+4. **Unpinned/Mutable Build References** (~45 menit): Lab 9 → 10 (CI Action & base image dipin
+   ke tag mutable).
 
 **Hari 7 — A06: Insecure Design**
 1. **Konsep dasar** (15 menit): kategori **A06: Insecure Design**.

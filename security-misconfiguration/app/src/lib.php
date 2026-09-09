@@ -44,3 +44,21 @@ function ensure_logged_in() {
         $_SESSION['api_key'] = $db['session_user']['api_key'];
     }
 }
+
+// Lab 10-12: cookie demo terpisah dari session PHP bawaan, supaya tiap lab
+// bisa mendemonstrasikan kombinasi flag (HttpOnly/Secure/SameSite) yang
+// berbeda-beda tanpa saling mempengaruhi. Set ulang setiap kali dipanggil
+// dengan $opts yang diberikan (bukan cuma sekali di awal), supaya flag yang
+// dikirim browser selalu sesuai dengan kode lab yang sedang dibuka.
+function ensure_demo_cookie($name, array $opts) {
+    if (!isset($_COOKIE[$name])) {
+        $token = bin2hex(random_bytes(8));
+        setcookie($name, $token, $opts);
+        $_COOKIE[$name] = $token;
+        return $token;
+    }
+    // Cookie sudah ada dari kunjungan sebelumnya - set ulang flag-nya (nilai
+    // tetap sama) supaya konsisten kalau opts di kode lab pernah diubah.
+    setcookie($name, $_COOKIE[$name], $opts);
+    return $_COOKIE[$name];
+}

@@ -20,6 +20,11 @@ ensure_update_files();
   <a href="lab3_cicd_secret_exposure.php">Lab 3: CI/CD Secret Exposure</a>
   <a href="lab4_unsigned_autoupdate.php">Lab 4: Unsigned Auto-Update</a>
   <a href="lab5_malicious_postinstall.php">Lab 5: Malicious Postinstall</a>
+  <a href="lab6_typosquatting.php">Lab 6: Typosquatting</a>
+  <a href="lab7_missing_sri.php">Lab 7: Missing SRI</a>
+  <a href="lab8_lockfile_ignored.php">Lab 8: Lockfile Ignored</a>
+  <a href="lab9_ci_action_mutable_tag.php">Lab 9: CI Action Mutable Tag</a>
+  <a href="lab10_mutable_base_image.php">Lab 10: Base Image Mutable Tag</a>
 </nav>
 <div class="container">
 <h1><?php echo $title; ?></h1>

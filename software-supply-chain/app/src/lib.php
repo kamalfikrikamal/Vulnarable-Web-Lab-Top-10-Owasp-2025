@@ -9,6 +9,13 @@ function seed_db() {
         'public_registry' => [],
         // Lab 5: paket pihak ketiga yang disubmit lengkap dengan skrip lifecycle (postinstall).
         'submitted_packages' => [],
+        // Lab 6: riwayat "install" yang pernah dicoba (nama paket -> apakah typosquat).
+        'typosquat_install_log' => [],
+        // Lab 9: commit yang saat ini ditunjuk oleh tag mutable "@v1" milik action pihak ketiga.
+        // Mulai dari commit asli/aman - bisa "diambil alih" attacker lewat form di lab.
+        'ci_action_v1_commit' => 'a1b2c3d (asli - jalankan build & upload artifact, tidak ada lainnya)',
+        // Lab 10: konten yang saat ini ditunjuk oleh tag mutable ":latest" milik base image.
+        'base_image_latest_content' => 'Base image resmi Corp - php:8.2-apache + tools internal standar (tidak ada backdoor)',
     ];
 }
 

@@ -29,3 +29,4 @@ table.data-table th { background: #f0f2f5; }
 .badge.admin { background: #fee2e2; color: #991b1b; }
 .badge.user { background: #dbeafe; color: #1e40af; }
 .creds-box { font-size: 12px; background: #eef2ff; border: 1px solid #c7d2fe; padding: 8px; border-radius: 6px; margin-bottom: 14px; }
+ul.file-list { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px 10px 10px 28px; font-family: monospace; font-size: 13px; }

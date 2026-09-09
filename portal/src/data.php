@@ -129,7 +129,7 @@ function owasp_categories() {
         'a02-security-misconfiguration' => [
             'code' => 'A02:2025', 'title' => 'Security Misconfiguration', 'status' => 'active',
             'summary' => 'Konfigurasi keamanan server/aplikasi yang salah atau longgar.',
-            'description' => '<p>Terjadi saat server, framework, database, atau layanan cloud dikonfigurasi secara tidak aman - biasanya karena memakai pengaturan bawaan (default) tanpa dikeraskan (hardening).</p><p><strong>Contoh sederhana:</strong> Mode debug Laravel/Django masih aktif di production sehingga error menampilkan detail source code dan environment variable (termasuk password database) ke publik.</p><p>Lab hari ini mencakup enam variasi Security Misconfiguration: <strong>debug mode aktif</strong> (stack trace & kredensial DB bocor lewat pesan error), <strong>kredensial default</strong> (panel admin masih pakai username/password bawaan vendor), <strong>directory listing</strong> (folder backup bisa dijelajahi langsung), <strong>debug endpoint tertinggal</strong> (halaman diagnostik developer tidak dihapus sebelum production), <strong>CORS misconfiguration</strong> (server mempercayai origin mana pun dengan kredensial), dan <strong>header keamanan yang hilang</strong> (membuka celah clickjacking).</p>',
+            'description' => '<p>Terjadi saat server, framework, database, atau layanan cloud dikonfigurasi secara tidak aman - biasanya karena memakai pengaturan bawaan (default) tanpa dikeraskan (hardening).</p><p><strong>Contoh sederhana:</strong> Mode debug Laravel/Django masih aktif di production sehingga error menampilkan detail source code dan environment variable (termasuk password database) ke publik.</p><p>Lab hari ini mencakup empat variasi Security Misconfiguration: <strong>Security Misconfiguration</strong> umum (debug mode, kredensial default, directory listing, debug endpoint tertinggal, CORS, header keamanan hilang), <strong>Exposed VCS/Config Files</strong> (folder <code>.git</code>, file <code>.env</code>, backup editor yang ikut ter-deploy ke webroot), <strong>Cookie Security Misconfiguration</strong> (atribut <code>HttpOnly</code>/<code>Secure</code>/<code>SameSite</code> yang dilewatkan), dan <strong>Insecure HTTP Methods</strong> (method <code>TRACE</code>/<code>PUT</code> yang seharusnya dimatikan tapi tetap aktif).</p>',
             'vulns' => [
                 'misconfig' => [
                     'title' => 'Security Misconfiguration',
@@ -174,12 +174,81 @@ function owasp_categories() {
                         ],
                     ],
                 ],
+                'exposed-vcs' => [
+                    'title' => 'Exposed VCS / Config Files',
+                    'summary' => 'File/folder yang tidak seharusnya ter-deploy ke webroot publik, tapi tetap bisa diakses.',
+                    'description' => '<p>Folder version control (<code>.git</code>), file konfigurasi (<code>.env</code>), dan file backup editor sering ikut ter-deploy ke webroot production tanpa disadari - dan karena web server tidak memblokir dotfile/nama file semacam ini secara default, semuanya tetap bisa diakses langsung lewat URL.</p>',
+                    'labs' => [
+                        'git-exposed' => [
+                            'title' => 'Folder .git ter-expose',
+                            'summary' => 'Seluruh riwayat commit, termasuk secret yang "sudah dihapus", bisa direkonstruksi.',
+                            'description' => '<p>Subsite kecil di-deploy dengan menyalin folder kerja git apa adanya. Directory listing aktif di <code>.git/</code>, sehingga isinya bisa diunduh dan riwayat commit-nya dibaca dengan <code>git log -p</code> - termasuk file yang pernah di-commit lalu dihapus di commit berikutnya.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab7_git_exposed.php',
+                        ],
+                        'env-exposed' => [
+                            'title' => 'File .env ter-expose',
+                            'summary' => 'File konfigurasi berisi kredensial database & application key bisa diakses langsung.',
+                            'description' => '<p>File <code>.env</code> ikut ter-deploy di root aplikasi, dan tidak ada aturan yang memblokir akses ke dotfile - kredensial production terbaca mentah-mentah lewat satu request.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab8_env_exposed.php',
+                        ],
+                        'backup-file-guess' => [
+                            'title' => 'Backup file editor yang bisa ditebak',
+                            'summary' => 'File recovery text editor membocorkan source code & kredensial.',
+                            'description' => '<p>File seperti <code>config.php.save</code> tertinggal di webroot dari sesi edit langsung di server - karena ekstensinya bukan <code>.php</code>, isinya dikirim sebagai teks biasa, bukan dieksekusi.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab9_backup_file_guess.php',
+                        ],
+                    ],
+                ],
+                'cookie-misconfig' => [
+                    'title' => 'Cookie Security Misconfiguration',
+                    'summary' => 'Atribut keamanan cookie sesi/autentikasi (HttpOnly/Secure/SameSite) dilewatkan.',
+                    'description' => '<p>Cookie sesi/autentikasi punya tiga atribut keamanan yang seharusnya selalu dipasang: <code>HttpOnly</code> (blokir akses lewat JavaScript), <code>Secure</code> (hanya lewat HTTPS), dan <code>SameSite</code> (kontrol pengiriman lintas situs). Melewatkan salah satunya melemahkan lapisan pertahanan yang sebetulnya murah untuk dipasang.</p>',
+                    'labs' => [
+                        'missing-httponly' => [
+                            'title' => 'Cookie tanpa flag HttpOnly',
+                            'summary' => 'Cookie sesi bisa dibaca lewat document.cookie.',
+                            'description' => '<p>Tanpa <code>HttpOnly</code>, bug XSS apa pun (sekecil apa pun) langsung bisa dipakai untuk mencuri cookie sesi lewat <code>document.cookie</code>.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab10_missing_httponly.php',
+                        ],
+                        'missing-secure' => [
+                            'title' => 'Cookie tanpa flag Secure',
+                            'summary' => 'Cookie sesi tetap terkirim ke endpoint plain HTTP mana pun.',
+                            'description' => '<p>Tanpa <code>Secure</code>, tidak ada jaminan browser bahwa cookie ini hanya melintas lewat koneksi terenkripsi - satu titik akses HTTP yang lupa di-redirect cukup untuk membocorkannya ke penyadap jaringan.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab11_missing_secure.php',
+                        ],
+                        'missing-samesite' => [
+                            'title' => 'Cookie tanpa atribut SameSite',
+                            'summary' => 'Atribut SameSite tidak dideklarasikan sama sekali.',
+                            'description' => '<p>Browser modern menerapkan default Lax diam-diam, tapi browser lama/WebView tetap memperlakukan cookie ini sebagai <code>None</code> - dikirim di semua request lintas situs.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab12_missing_samesite.php',
+                        ],
+                    ],
+                ],
+                'http-methods' => [
+                    'title' => 'Insecure HTTP Methods',
+                    'summary' => 'HTTP method di luar GET/POST yang seharusnya dimatikan tapi tetap diterima server.',
+                    'description' => '<p>Web server dan aplikasi PHP secara default tetap memproses method HTTP seperti <code>TRACE</code> dan <code>PUT</code> kecuali dimatikan/dibatasi secara eksplisit - keduanya jarang benar-benar dibutuhkan aplikasi, tapi kalau aktif membuka attack surface baru di luar form/endpoint yang dimaksudkan developer.</p>',
+                    'labs' => [
+                        'trace-method' => [
+                            'title' => 'HTTP method TRACE aktif (XST)',
+                            'summary' => 'Server meng-echo balik seluruh header request, termasuk Cookie.',
+                            'description' => '<p>Default aman <code>TraceEnable Off</code> dari image dasar sengaja dibalik jadi <code>On</code> - request <code>TRACE</code> mendapat balasan berisi persis header yang dikirim, celah historis untuk melewati proteksi HttpOnly (Cross-Site Tracing).</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab13_trace_method.php',
+                        ],
+                        'put-method' => [
+                            'title' => 'HTTP method PUT diterima tanpa validasi',
+                            'summary' => 'Request PUT menyimpan file apa pun ke direktori yang dieksekusi PHP.',
+                            'description' => '<p>Endpoint memproses method <code>PUT</code> dan menyimpan body request apa adanya tanpa validasi ekstensi/isi/autentikasi - webshell bisa ditanam tanpa pernah menyentuh form upload aplikasi.</p>',
+                            'app' => 'secmisconfig', 'path' => 'lab14_put_method.php',
+                        ],
+                    ],
+                ],
             ],
         ],
         'a03-software-supply-chain-failures' => [
             'code' => 'A03:2025', 'title' => 'Software Supply Chain Failures', 'status' => 'active',
             'summary' => 'Risiko dari dependency, pipeline build, dan komponen pihak ketiga.',
-            'description' => '<p>Aplikasi modern bergantung pada ratusan library pihak ketiga dan pipeline CI/CD otomatis. Jika salah satu mata rantai ini disusupi, aplikasi ikut terdampak walau kode yang kita tulis sendiri aman.</p><p><strong>Contoh sederhana:</strong> Penyerang mengunggah paket npm dengan nama mirip library populer (typosquatting, mis. <code>expres</code> alih-alih <code>express</code>); developer yang salah ketik saat install tanpa sadar menjalankan kode berbahaya tersebut.</p><p>Lab hari ini mencakup lima variasi Software Supply Chain Failures: <strong>Prototype Pollution</strong> di utility library versi lama, <strong>dependency confusion</strong> (nama package internal "direbut" di registry publik), <strong>secret CI/CD yang ter-expose</strong>, <strong>auto-update tanpa verifikasi</strong>, dan <strong>postinstall script berbahaya</strong> dari dependency yang tidak direview.</p>',
+            'description' => '<p>Aplikasi modern bergantung pada ratusan library pihak ketiga dan pipeline CI/CD otomatis. Jika salah satu mata rantai ini disusupi, aplikasi ikut terdampak walau kode yang kita tulis sendiri aman.</p><p><strong>Contoh sederhana:</strong> Penyerang mengunggah paket npm dengan nama mirip library populer (typosquatting, mis. <code>expres</code> alih-alih <code>express</code>); developer yang salah ketik saat install tanpa sadar menjalankan kode berbahaya tersebut.</p><p>Lab hari ini mencakup tiga variasi Software Supply Chain Failures: <strong>Software Supply Chain Failures</strong> umum (Prototype Pollution, dependency confusion, secret CI/CD ter-expose, auto-update tanpa verifikasi, postinstall berbahaya), <strong>Malicious/Compromised Package Content</strong> (typosquatting, missing SRI pada skrip CDN, lockfile yang tidak ditegakkan), dan <strong>Unpinned/Mutable Build References</strong> (CI Action & base image container yang dipin ke tag mutable, bukan SHA/digest immutable).</p>',
             'vulns' => [
                 'supply-chain' => [
                     'title' => 'Software Supply Chain Failures',
@@ -215,6 +284,50 @@ function owasp_categories() {
                             'summary' => 'Script lifecycle dari dependency pihak ketiga dijalankan otomatis tanpa direview.',
                             'description' => '<p>Package manager modern menjalankan script <code>postinstall</code> milik dependency secara otomatis dengan privilese penuh - dependency yang tidak direview bisa menyelundupkan perintah shell apa pun lewat script ini.</p>',
                             'app' => 'supplychain', 'path' => 'lab5_malicious_postinstall.php',
+                        ],
+                    ],
+                ],
+                'malicious-package-content' => [
+                    'title' => 'Malicious / Compromised Package Content',
+                    'summary' => 'Konten dependency yang benar-benar terpasang berbeda dari yang dimaksudkan/direview tim.',
+                    'description' => '<p>Bukan cuma soal registry mana yang dipakai - nama paket yang disamarkan (typosquatting), sumber eksternal yang tidak diverifikasi (missing SRI), dan lockfile yang tidak ditegakkan semuanya membuat konten yang benar-benar terpasang/dijalankan berbeda dari yang dipercaya developer.</p>',
+                    'labs' => [
+                        'typosquatting' => [
+                            'title' => 'Typosquatting',
+                            'summary' => 'Paket dengan nama nyaris identik didaftarkan attacker di registry publik.',
+                            'description' => '<p>Nama paket lookalike (satu-dua karakter berbeda, mis. huruf <code>l</code> diganti <code>I</code> kapital) terdaftar di registry publik - korban ter-install paket yang salah karena copy-paste command tanpa mengecek ulang.</p>',
+                            'app' => 'supplychain', 'path' => 'lab6_typosquatting.php',
+                        ],
+                        'missing-sri' => [
+                            'title' => 'Missing Subresource Integrity (SRI)',
+                            'summary' => 'Skrip pihak ketiga dimuat dari CDN tanpa atribut integrity.',
+                            'description' => '<p>Tanpa atribut <code>integrity</code>, browser menjalankan apa pun isi skrip yang diterima dari CDN eksternal tanpa verifikasi - kalau CDN-nya disusupi, skrip yang sudah dimodifikasi tetap jalan penuh.</p>',
+                            'app' => 'supplychain', 'path' => 'lab7_missing_sri.php',
+                        ],
+                        'lockfile-ignored' => [
+                            'title' => 'Lockfile diabaikan saat build',
+                            'summary' => 'Proses build tidak menegakkan versi yang dikunci di lockfile.',
+                            'description' => '<p>Lockfile mengunci dependency ke versi & hash yang sudah direview, tapi build yang tidak memakai mode "frozen" bisa diam-diam mengambil versi lebih baru yang belum direview (dan sudah disusupi).</p>',
+                            'app' => 'supplychain', 'path' => 'lab8_lockfile_ignored.php',
+                        ],
+                    ],
+                ],
+                'unpinned-build-references' => [
+                    'title' => 'Unpinned / Mutable Build References',
+                    'summary' => 'Referensi mutable (tag) dipakai alih-alih referensi immutable (SHA/digest).',
+                    'description' => '<p>Tag seperti <code>@v1</code> atau <code>:latest</code> hanyalah pointer yang bisa dipindahkan kapan saja oleh siapa pun yang punya akses ke sumbernya - referensi immutable (commit SHA, digest) menjamin konten yang berjalan selalu persis yang pernah direview.</p>',
+                    'labs' => [
+                        'ci-action-mutable-tag' => [
+                            'title' => 'CI Action dipin ke tag mutable',
+                            'summary' => 'Workflow memanggil Action pihak ketiga lewat tag yang bisa dipindah, bukan commit SHA.',
+                            'description' => '<p>Tag <code>@v1</code> pada Action CI/CD pihak ketiga bisa dipindah kapan saja oleh maintainer atau attacker yang membajak repo-nya - workflow yang pin ke tag otomatis menjalankan apa pun yang sedang ditunjuknya.</p>',
+                            'app' => 'supplychain', 'path' => 'lab9_ci_action_mutable_tag.php',
+                        ],
+                        'mutable-base-image' => [
+                            'title' => 'Container base image dipin ke tag mutable',
+                            'summary' => 'Dockerfile memakai :latest alih-alih digest sha256:... yang immutable.',
+                            'description' => '<p>Sama seperti Action CI/CD, tag image container bisa dipindah ke digest lain kapan saja oleh siapa pun yang punya akses push ke registry - build yang pin ke tag mewarisi apa pun yang sedang ditunjuknya.</p>',
+                            'app' => 'supplychain', 'path' => 'lab10_mutable_base_image.php',
                         ],
                     ],
                 ],
