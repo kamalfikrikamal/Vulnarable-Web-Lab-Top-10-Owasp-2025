@@ -22,6 +22,14 @@ function seed_db() {
         ],
         'wallet_balance' => 0,
         'redemption_log' => [],
+
+        // --- Vuln group 2: Non-Atomic & Type-Unsafe Exceptional Handling (Lab 5-8) ---
+        'charges' => [],
+        'account_a_balance' => 1000000,
+        'account_b_balance' => 500000,
+        'transfer_log' => [],
+        'profile' => ['display_name' => 'guest'],
+        'fraud_orders' => [],
     ];
 }
 

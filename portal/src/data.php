@@ -1044,7 +1044,7 @@ function owasp_categories() {
         'a09-logging-alerting-failures' => [
             'code' => 'A09:2025', 'title' => 'Logging & Alerting Failures', 'status' => 'active',
             'summary' => 'Serangan tidak tercatat sehingga terlambat terdeteksi.',
-            'description' => '<p>Tanpa log dan alert yang memadai, tim keamanan tidak akan tahu bahwa sedang atau sudah terjadi serangan, sehingga respons insiden menjadi sangat lambat - bahkan bisa baru diketahui berbulan-bulan kemudian.</p><p><strong>Contoh sederhana:</strong> Ada 50.000 percobaan login gagal ke satu akun dalam semalam, tapi tidak ada log maupun notifikasi apa pun yang terpicu ke tim keamanan.</p><p>Lab hari ini mencakup empat variasi Logging & Alerting Failures: <strong>log injection/forgery</strong>, <strong>log injection yang berujung Stored XSS</strong> di dashboard admin, <strong>tidak ada log/alert</strong> untuk percobaan login gagal, dan <strong>data sensitif tercatat mentah</strong> di log aplikasi.</p>',
+            'description' => '<p>Tanpa log dan alert yang memadai, tim keamanan tidak akan tahu bahwa sedang atau sudah terjadi serangan, sehingga respons insiden menjadi sangat lambat - bahkan bisa baru diketahui berbulan-bulan kemudian.</p><p><strong>Contoh sederhana:</strong> Ada 50.000 percobaan login gagal ke satu akun dalam semalam, tapi tidak ada log maupun notifikasi apa pun yang terpicu ke tim keamanan.</p><p>Lab hari ini mencakup dua variasi Logging & Alerting Failures: <strong>Logging & Alerting Failures</strong> umum (log injection/forgery, log injection ke Stored XSS, tidak ada alert brute-force, data sensitif di log), dan <strong>Alerting & Log Integrity Gaps</strong> (threshold alert yang bisa dievasi lewat pacing, audit log yang bisa dihapus user biasa, kebocoran lewat console.log di browser, dan log yang ada tapi kurang konteks untuk investigasi).</p>',
             'vulns' => [
                 'logging' => [
                     'title' => 'Logging & Alerting Failures',
@@ -1077,12 +1077,43 @@ function owasp_categories() {
                         ],
                     ],
                 ],
+                'alerting-log-integrity-gaps' => [
+                    'title' => 'Alerting & Log Integrity Gaps',
+                    'summary' => 'Mekanisme logging/alerting ADA, tapi masing-masing punya celah yang berbeda.',
+                    'description' => '<p>Beda dari kategori dasar di atas (yang sama sekali tidak punya log/alert), lab-lab ini menunjukkan bahwa PUNYA mekanisme logging/alerting saja tidak cukup - threshold yang bisa dievasi, log yang bisa dihapus pelakunya sendiri, kanal logging yang tidak disadari (browser console), dan log yang ada tapi tidak cukup detail semuanya membuat deteksi/investigasi tetap gagal walau "terlihat" sudah ada.</p>',
+                    'labs' => [
+                        'threshold-evasion' => [
+                            'title' => 'Alert threshold bisa dievasi lewat pacing',
+                            'summary' => 'Alert cuma terpicu kalau lebih dari N kegagalan dalam satu window waktu tetap.',
+                            'description' => '<p>Mengirim percobaan gagal dalam batch yang selalu di bawah ambang batas per window membuat total ratusan percobaan tidak pernah memicu satu alert pun, walau alert-nya sendiri secara teknis berfungsi.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab5_threshold_evasion.php',
+                        ],
+                        'log-tampering' => [
+                            'title' => 'Audit log bisa dihapus lewat fitur "hapus riwayat"',
+                            'summary' => 'Fitur privasi biasa ternyata menghapus tabel audit log investigasi yang sama.',
+                            'description' => '<p>"Hapus Riwayat Aktivitas Saya" yang terlihat seperti fitur privasi biasa ternyata menghapus data audit log yang sama yang dipakai tim SOC untuk investigasi keamanan.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab6_log_tampering.php',
+                        ],
+                        'client-side-console-logging' => [
+                            'title' => 'Kebocoran lewat console.log() di browser',
+                            'summary' => 'Token sesi & API key ter-log ke console browser, bukan log server.',
+                            'description' => '<p>Data sensitif bocor lewat kanal yang sama sekali berbeda dari log server - console browser tiap pengunjung, terlihat siapa pun yang membuka DevTools atau lewat ekstensi browser yang jahat.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab7_client_side_console_logging.php',
+                        ],
+                        'insufficient-log-context' => [
+                            'title' => 'Log ada tapi kurang konteks untuk investigasi',
+                            'summary' => 'Log transaksi cuma catat timestamp & jumlah, tanpa user/IP/session.',
+                            'description' => '<p>Log secara teknis "ada", tapi tidak mencatat identitas yang mengaitkan (user, IP, session, request ID) - investigasi insiden jadi praktis mustahil walau log-nya sendiri tidak kosong.</p>',
+                            'app' => 'loggingfail', 'path' => 'lab8_insufficient_log_context.php',
+                        ],
+                    ],
+                ],
             ],
         ],
         'a10-mishandling-exceptional-conditions' => [
             'code' => 'A10:2025', 'title' => 'Mishandling of Exceptional Conditions', 'status' => 'active',
             'summary' => 'Penanganan error/kondisi tak terduga yang buruk membuka celah baru.',
-            'description' => '<p>Terjadi ketika aplikasi tidak menangani error, input tak terduga, atau kegagalan komponen lain dengan benar - sehingga informasi sensitif bocor atau alur keamanan bisa dilewati saat sistem berada dalam kondisi tidak normal.</p><p><strong>Contoh sederhana:</strong> Saat koneksi ke layanan verifikasi pembayaran gagal/timeout, aplikasi "fail open" dan tetap menganggap transaksi berhasil, alih-alih menolaknya.</p><p>Lab hari ini mencakup empat variasi Mishandling of Exceptional Conditions: <strong>fail-open saat layanan eksternal timeout</strong>, <strong>error message yang bocor dari input tak terduga</strong>, <strong>race condition di jalur "sudah dipakai"</strong>, dan <strong>fail-open di dalam blok catch</strong> pemeriksaan keamanan.</p>',
+            'description' => '<p>Terjadi ketika aplikasi tidak menangani error, input tak terduga, atau kegagalan komponen lain dengan benar - sehingga informasi sensitif bocor atau alur keamanan bisa dilewati saat sistem berada dalam kondisi tidak normal.</p><p><strong>Contoh sederhana:</strong> Saat koneksi ke layanan verifikasi pembayaran gagal/timeout, aplikasi "fail open" dan tetap menganggap transaksi berhasil, alih-alih menolaknya.</p><p>Lab hari ini mencakup dua variasi Mishandling of Exceptional Conditions: <strong>Mishandling of Exceptional Conditions</strong> umum (fail-open saat timeout, error message bocor, race condition, fail-open di blok catch), dan <strong>Non-Atomic &amp; Type-Unsafe Exceptional Handling</strong> (retry yang menyebabkan double charge, transaksi multi-step tanpa rollback, filter <code>in_array()</code> yang bisa dilewati lewat tipe data tak terduga, dan fail-open dari response API yang gagal di-parse).</p>',
             'vulns' => [
                 'exceptions' => [
                     'title' => 'Mishandling of Exceptional Conditions',
@@ -1112,6 +1143,37 @@ function owasp_categories() {
                             'summary' => 'Input aneh membuat pengecekan akses error, lalu catch block meloloskan akses.',
                             'description' => '<p>Pengecekan kepemilikan dibungkus try/catch - input yang tidak terduga (mis. tipe data salah) membuat pengecekan itu sendiri melempar exception, dan blok catch-nya meloloskan akses alih-alih menolak.</p>',
                             'app' => 'exceptcond', 'path' => 'lab4_failopen_catch_block.php',
+                        ],
+                    ],
+                ],
+                'non-atomic-type-unsafe-handling' => [
+                    'title' => 'Non-Atomic & Type-Unsafe Exceptional Handling',
+                    'summary' => 'Retry, multi-step transaction, dan filter yang gagal menangani kondisi tak terduga dengan aman.',
+                    'description' => '<p>Kondisi tak terduga bukan cuma soal exception yang melempar error - operasi yang di-retry tanpa idempotency, transaksi multi-step tanpa rollback, tipe data yang tidak divalidasi sebelum masuk logika filter, dan default value yang diam-diam menggantikan hasil pengecekan keamanan semuanya adalah bentuk lain dari penanganan kondisi tak terduga yang gagal.</p>',
+                    'labs' => [
+                        'duplicate-charge-retry' => [
+                            'title' => 'Retry setelah timeout menyebabkan double charge',
+                            'summary' => 'Operasi non-idempotent di-retry tanpa mengecek apakah request sebelumnya sudah berhasil.',
+                            'description' => '<p>Saat response pembayaran "timeout" (padahal charge-nya sudah benar-benar diproses di backend), klik "Coba Lagi" mengirim ulang charge yang sama tanpa idempotency key - order yang sama ter-charge dua kali.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab5_duplicate_charge_retry.php',
+                        ],
+                        'no-rollback-partial-failure' => [
+                            'title' => 'Transaksi multi-step tanpa rollback',
+                            'summary' => 'Step kedua transfer dana gagal, tapi step pertama (pengurangan saldo) tidak pernah dibatalkan.',
+                            'description' => '<p>Transfer dana dilakukan lewat dua step terpisah tanpa transaction/rollback yang membungkus keduanya - kalau step kedua gagal karena input tak terduga, saldo yang sudah dikurangi di step pertama tetap hilang begitu saja.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab6_no_rollback_partial_failure.php',
+                        ],
+                        'type-confusion-filter-bypass' => [
+                            'title' => 'Filter in_array() dilewati lewat tipe data tak terduga',
+                            'summary' => 'Mengirim field sebagai array alih-alih string membuat blocklist tidak pernah cocok.',
+                            'description' => '<p>Filter blocklist mengasumsikan input selalu string - mengirim field yang sama sebagai array (<code>field[]=admin</code>) membuat <code>in_array()</code> tidak pernah menemukan kecocokan, melewati filter dengan nilai yang identik.</p>',
+                            'app' => 'exceptcond', 'path' => 'lab7_type_confusion_filter_bypass.php',
+                        ],
+                        'malformed-response-fail-open' => [
+                            'title' => 'Fail-open dari response API yang gagal di-parse',
+                            'summary' => 'Response fraud-check yang bentuknya tak terduga membuat pengecekan diam-diam dianggap aman.',
+                            'description' => '<p>Default value dari operator <code>??</code> dipakai untuk field keamanan - saat response API berbentuk tak terduga (bukan timeout, tapi shape yang salah), field yang hilang diam-diam dianggap "tidak flagged" alih-alih "belum pernah benar-benar dicek".</p>',
+                            'app' => 'exceptcond', 'path' => 'lab8_malformed_response_fail_open.php',
                         ],
                     ],
                 ],

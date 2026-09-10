@@ -29,9 +29,13 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
   sebagian data, checksum dari sumber tidak independen, variable injection lewat `extract()`,
   dynamic dispatch dari input tak tepercaya.
 - **A09:2025 — Logging & Alerting Failures**: log injection/forgery, log injection → stored
-  XSS di dashboard admin, tidak ada alert brute-force, data sensitif tercatat di log.
+  XSS di dashboard admin, tidak ada alert brute-force, data sensitif tercatat di log, alert
+  threshold yang bisa dievasi lewat pacing, audit log yang bisa dihapus lewat "hapus riwayat",
+  kebocoran lewat console.log() browser, log yang kurang konteks untuk investigasi.
 - **A10:2025 — Mishandling of Exceptional Conditions**: fail-open saat gateway timeout, error
-  message bocor, race condition redeem gift card, fail-open di blok catch keamanan.
+  message bocor, race condition redeem gift card, fail-open di blok catch keamanan, retry
+  penyebab double charge, transaksi tanpa rollback, filter `in_array()` yang bisa dilewati
+  lewat tipe data tak terduga, fail-open dari response API yang gagal di-parse.
 
 > ⚠️ **PERINGATAN KEAMANAN** — Semua aplikasi di repo ini SENGAJA dibuat rentan untuk tujuan
 > edukasi, termasuk `command-injection/`, `lfi/`, dan `file-upload/` yang benar-benar bisa
@@ -70,8 +74,8 @@ Candidate)** sebagai peta kategori. Seluruh sepuluh kategori sudah lengkap isiny
 ├── session-management/         # PHP - 4 lab Broken Session Management (A07)
 ├── password-reset/             # PHP - 4 lab Password Reset Flaws (A07)
 ├── data-integrity/               # PHP - 10 lab Software or Data Integrity Failures (A08)
-├── logging-failures/             # PHP - 4 lab Logging & Alerting Failures (A09)
-└── exceptional-conditions/       # PHP - 4 lab Mishandling of Exceptional Conditions (A10)
+├── logging-failures/             # PHP - 8 lab Logging & Alerting Failures (A09)
+└── exceptional-conditions/       # PHP - 8 lab Mishandling of Exceptional Conditions (A10)
 ```
 
 Kode tiap kerentanan tetap terpisah per folder (sesuai kategorinya), tapi **hanya ada satu
@@ -209,10 +213,10 @@ Lihat README masing-masing folder untuk daftar lengkap payload contoh dan poin m
 - [data-integrity/README.md](data-integrity/README.md) — 10 lab Software or Data Integrity Failures
 
 **A09: Logging & Alerting Failures**
-- [logging-failures/README.md](logging-failures/README.md) — 4 lab Logging & Alerting Failures
+- [logging-failures/README.md](logging-failures/README.md) — 8 lab Logging & Alerting Failures
 
 **A10: Mishandling of Exceptional Conditions**
-- [exceptional-conditions/README.md](exceptional-conditions/README.md) — 4 lab Mishandling of Exceptional Conditions
+- [exceptional-conditions/README.md](exceptional-conditions/README.md) — 8 lab Mishandling of Exceptional Conditions
 
 Kunci jawaban lengkap tiap lab (khusus trainer/pendamping — jangan dibagikan ke peserta
 sebelum sesi selesai):
@@ -299,14 +303,18 @@ sebelum sesi selesai):
 
 **Hari 9 — A09: Logging & Alerting Failures**
 1. **Konsep dasar** (15 menit): kategori **A09: Logging & Alerting Failures**.
-2. **Logging & Alerting Failures** (~2 jam): Lab 1 → 4 (log injection/forgery, log injection
+2. **Logging & Alerting Failures** (~1.5 jam): Lab 1 → 4 (log injection/forgery, log injection
    → stored XSS, tidak ada alert brute-force, data sensitif di log).
+3. **Alerting & Log Integrity Gaps** (~1.5 jam): Lab 5 → 8 (threshold evasion, log tampering,
+   console.log leak, log kurang konteks).
 
 **Hari 10 — A10: Mishandling of Exceptional Conditions**
 1. **Konsep dasar** (15 menit): kategori **A10: Mishandling of Exceptional Conditions**.
-2. **Mishandling of Exceptional Conditions** (~2 jam): Lab 1 → 4 (fail-open gateway timeout,
+2. **Mishandling of Exceptional Conditions** (~1.5 jam): Lab 1 → 4 (fail-open gateway timeout,
    error message bocor, race condition gift card, fail-open di blok catch).
-3. **Diskusi mitigasi & penutup** (30 menit): rangkum mitigasi seluruh 10 kategori.
+3. **Non-Atomic & Type-Unsafe Exceptional Handling** (~1.5 jam): Lab 5 → 8 (double charge lewat
+   retry, transaksi tanpa rollback, type confusion pada filter, fail-open response malformed).
+4. **Diskusi mitigasi & penutup** (30 menit): rangkum mitigasi seluruh 10 kategori.
 
 ## Tooling yang disarankan untuk peserta
 - Browser + DevTools

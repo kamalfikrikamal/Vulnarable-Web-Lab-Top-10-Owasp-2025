@@ -71,6 +71,69 @@ sungguhan.
 
 ---
 
+## Lab 5 — Alert threshold bisa dihindari dengan pacing (`lab5_threshold_evasion.php`)
+**Kode:** setiap request memangkas (`array_filter`) `$db['threshold_login_fails']` supaya hanya
+menyisakan timestamp dalam 60 detik terakhir, lalu setelah menambahkan percobaan gagal baru, cek
+`count($db['threshold_login_fails']) > 20` — kalau ya baru `threshold_alerts_fired++` dan
+`append_log('brute_alerts.log', ...)`. Tidak ada memori/statistik di luar window aktif ini.
+**Payload:** PIN admin `705`. Kirim batch "Coba banyak PIN sekaligus" berisi 15 PIN salah (di
+bawah threshold 20), tunggu &gt;60 detik, ulangi beberapa kali.
+**Kenapa berhasil:** alert hanya dievaluasi terhadap jumlah percobaan gagal di window 60 detik
+yang aktif *saat itu saja*. Selama satu batch tidak pernah melebihi 20 percobaan dalam window-nya
+sendiri, alert tidak pernah terpicu — tidak peduli berapa total percobaan gagal yang sudah
+terkumpul sepanjang waktu.
+**Hasil:** `threshold_alerts_fired` tetap `0` dan `brute_alerts.log` tetap kosong, walaupun
+`threshold_total_attempts` (all-time) sudah melewati puluhan/ratusan — membuktikan threshold
+fixed-count/fixed-window bisa dihindari sepenuhnya dengan mengatur kecepatan serangan.
+
+---
+
+## Lab 6 — User bisa menghapus log audit miliknya sendiri (`lab6_log_tampering.php`)
+**Kode:** tombol "Hapus Semua Riwayat" mengirim POST yang langsung menjalankan
+`$db['audit_log'] = []; save_db($db);` — persis tabel yang sama yang dibaca ulang oleh view
+`?view=soc`.
+**Payload:** buka `lab6_log_tampering.php` (tab "Riwayat Aktivitas Saya"), klik "Hapus Semua
+Riwayat", lalu buka `?view=soc`.
+**Kenapa berhasil:** tidak ada pemisahan struktural antara "data yang boleh dihapus user" dan
+"log audit keamanan" — keduanya adalah satu tabel `audit_log` yang sama, dan endpoint hapusnya
+bisa diakses dengan hak akses user biasa.
+**Hasil:** setelah menghapus, tab "Admin: Log Investigasi (SOC)" ikut menampilkan `audit_log`
+KOSONG — seluruh jejak aktivitas keamanan akun (perubahan email, percobaan login gagal, ekspor
+data) lenyap tanpa perlu hak akses admin sama sekali.
+
+---
+
+## Lab 7 — Data sensitif bocor lewat console browser (`lab7_client_side_console_logging.php`)
+**Kode:** `<script>` inline menjalankan `console.log('DEBUG session:', {user_id, session_token,
+saved_card_last4, internal_api_key})` saat halaman dimuat dan saat tombol "Lanjutkan ke
+Pembayaran" diklik.
+**Payload:** buka `lab7_client_side_console_logging.php`, buka DevTools → tab Console (atau lihat
+kotak reproduksi `<pre>` di halaman yang sama untuk bukti tanpa harus membuka browser).
+**Kenapa berhasil:** baris debug logging yang menulis token sesi dan API key internal ke console
+tidak pernah dihapus sebelum rilis ke produksi — halaman itu sendiri (HTML, response jaringan)
+tidak membocorkan apa pun, tapi console browser setiap pengunjung membocorkannya secara diam-diam.
+**Hasil:** `session_token` (`sess_9f8c2a41e7b3441dbe9a7d6c3f0a1122`) dan `internal_api_key`
+(`sk_internal_live_4f9b2e7a1c8d3f56`) muncul persis di console browser — terbukti lewat kotak
+reproduksi di halaman lab, dan (kalau trainee membuka DevTools sungguhan) langsung di tab Console.
+
+---
+
+## Lab 8 — Log ada, tapi tidak cukup konteks untuk investigasi (`lab8_insufficient_log_context.php`)
+**Kode:** `payment_log` (v1) ditulis dengan format tetap `[timestamp] Payment processed:
+amount=Rp X` — tidak ada field lain sama sekali. Tombol "Proses Pembayaran Baru" menulis ke
+`payment_log_v2` dengan format `... amount=Rp X, user_id=Y, ip=Z, session_id=W, request_id=V`.
+**Payload:** buka `lab8_insufficient_log_context.php`, cari baris `amount=Rp 50.000.000` di log
+v1, lalu klik "Proses Pembayaran Baru" untuk melihat baris v2 sebagai pembanding.
+**Kenapa berhasil:** log v1 "ada" secara teknis, tapi formatnya sejak awal memang tidak pernah
+menyertakan identitas apa pun yang bisa dipakai menelusuri pelaku — bukan soal data yang hilang,
+tapi field yang memang tidak pernah dirancang untuk ditangkap.
+**Hasil:** baris log v1 yang cocok dengan laporan finance (Rp 50.000.000) hanya berisi timestamp
+dan jumlah — investigasi mentok total. Baris v2 yang baru dibuat menyertakan `user_id`, `ip`,
+`session_id`, dan `request_id` — perbandingan langsung yang membuktikan "logging ada" tidak sama
+dengan "logging cukup untuk investigasi".
+
+---
+
 ## Ringkasan hasil akhir
 
 | Lab | Teknik | Bukti keberhasilan |
@@ -79,6 +142,10 @@ sungguhan.
 | 2 | Log content tidak di-escape saat dirender di dashboard | Stored XSS jalan di halaman admin, mengubah judul tab |
 | 3 | Percobaan gagal tidak pernah dicatat/dipantau | Ratusan percobaan brute force tidak meninggalkan jejak di log |
 | 4 | Field sensitif dicatat plaintext ke log debug | Nomor kartu & CVV milik trainee + 3 user lain terbaca di log |
+| 5 | Alert threshold per-window dihindari dengan pacing batch | `threshold_alerts_fired` tetap 0 walau total percobaan gagal sudah puluhan/ratusan |
+| 6 | Log audit bisa dihapus lewat izin level-user biasa | View SOC ikut kosong setelah user klik "Hapus Semua Riwayat" |
+| 7 | Token/secret ikut ter-log ke console browser | `session_token` & `internal_api_key` muncul di console setiap kunjungan |
+| 8 | Log tidak menyertakan identitas korelasi (user/IP/session/request) | Baris log v1 mustahil ditelusuri; baris v2 pembanding membuktikan bedanya |
 
 ## Mitigasi (ringkas, lihat [README.md](README.md) untuk versi lengkap)
 - Strip/encode karakter kontrol (newline dkk) dari input sebelum ditulis ke log, atau pakai
@@ -88,3 +155,9 @@ sungguhan.
 - Pasang alerting/threshold nyata untuk pola mencurigakan (banyak gagal dalam waktu singkat).
 - Jangan pernah mencatat field sensitif (kartu, password, token) secara utuh — mask/redact dulu.
 - Perlakukan file log sebagai aset sensitif dengan kontrol akses sendiri.
+- Kalibrasi threshold alert terhadap pola low-and-slow (deteksi anomali adaptif/statistik, atau
+  threshold rendah + lockout per-IP/akun) — bukan aturan fixed-count/fixed-window tunggal.
+- Pisahkan log audit/keamanan secara struktural dari data user biasa — akun yang diawasi tidak
+  boleh bisa menghapus log yang mengawasinya sendiri.
+- Jangan pernah mencatat token/secret ke console browser — strip debug logging dari build produksi.
+- Sertakan identitas berkorelasi (user, session, IP, request ID) di setiap log keamanan.

@@ -18,6 +18,10 @@ $db = load_db();
   <a href="lab2_log_injection_stored_xss.php">Lab 2: Stored XSS via Log</a>
   <a href="lab3_no_alerting_bruteforce.php">Lab 3: No Alerting</a>
   <a href="lab4_sensitive_data_in_logs.php">Lab 4: Data Sensitif di Log</a>
+  <a href="lab5_threshold_evasion.php">Lab 5: Threshold Bisa Dihindari</a>
+  <a href="lab6_log_tampering.php">Lab 6: Log Bisa Dihapus User</a>
+  <a href="lab7_client_side_console_logging.php">Lab 7: Bocor di Console Browser</a>
+  <a href="lab8_insufficient_log_context.php">Lab 8: Log Tanpa Konteks</a>
 </nav>
 <div class="container">
 <h1><?php echo $title; ?></h1>
